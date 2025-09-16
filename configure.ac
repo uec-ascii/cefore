@@ -246,6 +246,7 @@ AM_COND_IF(
       src/csmgrd/plugin/lib/lru/Makefile
       src/csmgrd/plugin/lib/lfu/Makefile
       src/csmgrd/plugin/lib/fifo/Makefile
+      src/csmgrd/plugin/lib/cvfifo/Makefile
       src/csmgrd/lib/Makefile
       src/csmgrd/include/Makefile
       src/csmgrd/include/csmgrd/Makefile

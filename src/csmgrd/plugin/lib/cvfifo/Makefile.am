@@ -1,7 +1,7 @@
 #
 # Copyright (c) 2016-2023, National Institute of Information and Communications
 # Technology (NICT). All rights reserved.
-# 
+#
 # Redistribution and use in source and binary forms, with or without
 # modification, are permitted provided that the following conditions are
 # met:
@@ -13,7 +13,7 @@
 # 3. Neither the name of the NICT nor the names of its contributors may be
 #    used to endorse or promote products derived from this software
 #    without specific prior written permission.
-# 
+#
 # THIS SOFTWARE IS PROVIDED BY THE NICT AND CONTRIBUTORS "AS IS" AND ANY
 # EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
 # WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -25,8 +25,33 @@
 # LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
 # OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
 # SUCH DAMAGE.
-# 
+#
 
-SUBDIRS = lru lfu fifo cvfifo
+# set include file directory
+AM_CFLAGS = -I$(top_srcdir)/src/include -I$(top_srcdir)/src/csmgrd/include
 
+# set library directory
+AM_LDFLAGS = -L$(top_srcdir)/src/lib/ -L$(top_srcdir)/src/csmgrd/lib
 
+# set csmgrd plugins directory
+CSMGRD_PLUGINS_DIR = $(top_srcdir)/src/csmgrd
+
+# set noinst_LTLIBRARIES
+noinst_LTLIBRARIES =
+
+# lib csmgrd plugins library
+lib_LTLIBRARIES = libcsmgrd_cvfifo.la
+libcsmgrd_cvfifo_la_CFLAGS = $(AM_CFLAGS) -Wall -O2 -fPIC
+libcsmgrd_cvfifo_la_SOURCES =
+libcsmgrd_cvfifo_la_LIBADD =
+
+# check default cache
+noinst_LTLIBRARIES += libcef_cvfifo.la
+libcef_cvfifo_la_CFLAGS  = $(AM_CFLAGS) -Wall -O2 -fPIC
+
+libcef_cvfifo_la_SOURCES = cvfifo.c cvfifo.h cache_replace_lib.c cache_replace_lib.h content_verification_lib.c content_verification_lib.h
+libcef_cvfifo_la_LDFLAGS = -lcefore -lcsmgr $(AM_LDFLAGS)
+
+libcsmgrd_cvfifo_la_LIBADD += libcef_cvfifo.la
+
+libdir=$(CEFORE_DIR_PATH)lib
