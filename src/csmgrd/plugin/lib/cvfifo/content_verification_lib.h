@@ -3,4 +3,4 @@
 #include <stdint.h>
 #include <csmgrd/csmgrd_plugin.h>
 
-void verify_content(CsmgrdT_Content_Entry* entry);
+int verify_content(CsmgrdT_Content_Entry* entry);
