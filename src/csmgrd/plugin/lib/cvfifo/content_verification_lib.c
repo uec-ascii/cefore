@@ -12,9 +12,18 @@ int verify_content(CsmgrdT_Content_Entry* entry){
     }
 
     fprintf(log_file, "Hello, World!\n");
+
+    // msgとnameを文字列として扱うために各lenまでをコピーしてヌル終端する
+    char msg_buf[entry->msg_len + 1];
+    char name_buf[entry->name_len + 1];
+    memcpy(msg_buf, entry->msg, entry->msg_len);
+    memcpy(name_buf, entry->name, entry->name_len);
+    msg_buf[entry->msg_len] = '\0';
+    name_buf[entry->name_len] = '\0';
+
     fprintf(log_file, "msg:%s:%u\nname:%s:%u\npay_len:%u\nchunk_num:%u\ncache_time:%lu\nexpiry:%lu\nnode:%u\nins_time:%lu\nversion:%s:%u\n",
-        entry->msg, entry->msg_len,
-        entry->name, entry->name_len,
+        msg_buf, entry->msg_len,
+        name_buf, entry->name_len,
         entry->pay_len,
         entry->chunk_num,
         entry->cache_time,
