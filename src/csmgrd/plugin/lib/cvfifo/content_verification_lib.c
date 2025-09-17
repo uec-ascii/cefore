@@ -18,17 +18,17 @@ int verify_content(CsmgrdT_Content_Entry* entry){
     char name_buf[entry->name_len + 1];
     memcpy(msg_buf, entry->msg, entry->msg_len);
     memcpy(name_buf, entry->name, entry->name_len);
-    // // 1文字ずつ確認していき、ヌル終端が最後以外にあったら半角スペースで置き換える
-    // for (size_t i = 0; i < entry->msg_len; i++) {
-    //     if (msg_buf[i] == '\0' && i != entry->msg_len - 1) {
-    //         msg_buf[i] = ' ';
-    //     }
-    // }
-    // for (size_t i = 0; i < entry->name_len; i++) {
-    //     if (name_buf[i] == '\0' && i != entry->name_len - 1) {
-    //         name_buf[i] = ' ';
-    //     }
-    // }
+    // 1文字ずつ確認していき、ヌル終端が最後以外にあったら半角スペースで置き換える
+    for (size_t i = 0; i < entry->msg_len; i++) {
+        if (msg_buf[i] == '\0' && i != entry->msg_len - 1) {
+            msg_buf[i] = ' ';
+        }
+    }
+    for (size_t i = 0; i < entry->name_len; i++) {
+        if (name_buf[i] == '\0' && i != entry->name_len - 1) {
+            name_buf[i] = ' ';
+        }
+    }
     msg_buf[entry->msg_len] = '\0';
     name_buf[entry->name_len] = '\0';
 
