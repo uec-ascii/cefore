@@ -91,7 +91,7 @@ cef_plugin_cotentverification_init (
 	char* value_str 	= NULL;
 
 	/* Obtains the attributes 			*/
-	lp = cef_plugin_parameter_value_get ("TRANSPORT", "contentverification");
+	lp = cef_plugin_parameter_value_get ("CONTENTVERIFICATION", "stat");
 
 	if (lp) {
 		value_str = (char*) cef_plugin_list_access (lp, 0);
