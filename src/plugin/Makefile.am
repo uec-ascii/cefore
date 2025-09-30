@@ -42,6 +42,11 @@ AM_CFLAGS+=-DCefC_Plugin_Samptp
 AM_CSOURCES+=transport/samptp/cef_plugin_samptp.c
 endif # SAMPTP_ENABLE
 
+if CONTENTVERIFICATION_ENABLE
+AM_FLAGS+=-DCefC_Plugin_ContentVerification
+AM_CSOURCES+=contentverification/contentverification/cef_contentverification.c \
+             contentverification/contentverification/content_verification_lib.c
+endif # CONTENTVERIFICATION_ENABLE
 
 lib_LIBRARIES=libcef_plugin.a
 libcef_plugin_a_CFLAGS=$(AM_CFLAGS)

@@ -168,6 +168,17 @@ AC_ARG_ENABLE(
 AM_CONDITIONAL(SAMPTP_ENABLE, test x"${enable_samptp}" = xyes)
 
 dnl
+dnl  check contentverification
+dnl
+AC_ARG_ENABLE(
+  contentverification,
+  AS_HELP_STRING([--enable-contentverification], [content verification (default no)]),
+  [enable_contentverification=yes],
+  [enable_contentverification=no]
+)
+AM_CONDITIONAL(CONTENTVERIFICATION_ENABLE, test x"${enable_contentverification}" = xyes)
+
+dnl
 dnl  check cache
 dnl
 AC_ARG_ENABLE(
