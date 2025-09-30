@@ -186,7 +186,7 @@ cef_plugin_cotentverification_interest (
 	int i;
 
 	/* Verify Content */
-	if(verify_content(rx_elem->msg, rx_elem->msg_len) != 0){
+	uf(verify_content(rx_elem->msg, rx_elem->msg_len) != 0){
 		fprintf(stderr, "[CONTENTVERIFICATION] content verification failed\n");
 		return (CefC_Pi_Interest_NoSend);
 	}
