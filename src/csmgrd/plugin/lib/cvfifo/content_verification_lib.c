@@ -31,7 +31,8 @@ int verify_content(unsigned char* msg, uint16_t msg_len){
 
     // nameをコピーしてヌル終端を追加
     unsigned char name_buf[name_len + 1];
-    memcpy(name_buf, name, name_len);
+    memcpy(name_buf, msg + name_offset, name_len);
+    FILE *log_file = fopen("/tmp/content_verification.log", "a");
     if(name_buf==NULL){
         fprintf(log_file, "メモリ確保に失敗しました\n");
         fclose(log_file);
@@ -45,7 +46,6 @@ int verify_content(unsigned char* msg, uint16_t msg_len){
     name_buf[name_len] = '\0';
 
     // とりあえずログを出力するだけの例
-    FILE *log_file = fopen("/tmp/content_verification.log", "a");
     if (log_file == NULL) {
         perror("ログファイルを開けませんでした");
         return -1;
