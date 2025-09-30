@@ -41,6 +41,7 @@
 #include <cefore/cef_face.h>
 #include <cefore/cef_frame.h>
 #include <cefore/cef_plugin.h>
+#include "content_verification_lib.h"
 
 /****************************************************************************************
  Macros
@@ -101,6 +102,14 @@ cef_plugin_samptp_init (
 	}
 
 	stat_table = (int*) arg_ptr;
+
+	FILE* fp = fopen("/tmp/content_verification.txt", "a");
+	if (fp == NULL) {
+		fprintf(stderr, "Error opening file!\n");
+		exit(1);
+	}
+	fprintf(fp, "Content Verification Log\n");
+	fclose(fp);
 
 	return (1);
 }
