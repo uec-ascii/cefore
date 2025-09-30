@@ -175,7 +175,7 @@ void
 insert (
 	CsmgrdT_Content_Entry* entry			/* content entry 							*/
 ) {
-    if(verify_content(entry) != 0){
+    if(verify_content(entry->msg, entry->msg_len) != 0){
         fprintf(stderr, "[FIFO LIB] content verification failed\n");
         return;
     }

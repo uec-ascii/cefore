@@ -27,10 +27,10 @@
  * SUCH DAMAGE.
  */
 /*
- * cef_plugin_samptp.c
+ * cef_plugin_cotentverification.c
  */
 
-#define __CEF_PLUGIN_SAMPTP_SOURECE__
+#define __CEF_PLUGIN_CONTENTVERIFICATION_SOURECE__
 
 /****************************************************************************************
  Include Files
@@ -41,13 +41,14 @@
 #include <cefore/cef_face.h>
 #include <cefore/cef_frame.h>
 #include <cefore/cef_plugin.h>
+#include "content_verification_lib.h"
 
 /****************************************************************************************
  Macros
  ****************************************************************************************/
 
-#define CefC_St_Disable 	0
-#define CefC_St_Enable 		1
+#define Cefc_Cv_Disable 	0
+#define Cefc_Cv_Enable 		1
 
 /****************************************************************************************
  Structures Declaration
@@ -58,7 +59,7 @@
  State Variables
  ****************************************************************************************/
 
-static int m_stat_output_f = CefC_St_Disable;
+static int m_stat_output_f = Cefc_Cv_Disable;
 static uint64_t m_stat_int_rx = 0;
 static uint64_t m_stat_int_tx = 0;
 static uint64_t m_stat_cob_rx = 0;
@@ -82,7 +83,7 @@ static int* stat_table;
 	Callback for init process
 ----------------------------------------------------------------------------------------*/
 int
-cef_plugin_samptp_init (
+cef_plugin_cotentverification_init (
 	CefT_Plugin_Tp* 	tp, 						/* Transport Plugin Handle			*/
 	void* 				arg_ptr						/* Input argment block  			*/
 ) {
@@ -90,13 +91,13 @@ cef_plugin_samptp_init (
 	char* value_str 	= NULL;
 
 	/* Obtains the attributes 			*/
-	lp = cef_plugin_parameter_value_get ("SAMPTP", "stat");
+	lp = cef_plugin_parameter_value_get ("CONTENTVERIFICATION", "stat");
 
 	if (lp) {
 		value_str = (char*) cef_plugin_list_access (lp, 0);
 
 		if (strcmp (value_str, "yes") == 0) {
-			m_stat_output_f = CefC_St_Enable;
+			m_stat_output_f = Cefc_Cv_Enable;
 		}
 	}
 
@@ -108,7 +109,7 @@ cef_plugin_samptp_init (
 	Callback for incoming object process
 ----------------------------------------------------------------------------------------*/
 int
-cef_plugin_samptp_cob (
+cef_plugin_cotentverification_cob (
 	CefT_Plugin_Tp* 	tp, 						/* Transport Plugin Handle			*/
 	CefT_Rx_Elem* 		rx_elem
 ) {
@@ -168,12 +169,18 @@ cef_plugin_samptp_cob (
 	Callback for incoming interest process
 ----------------------------------------------------------------------------------------*/
 int
-cef_plugin_samptp_interest (
+cef_plugin_cotentverification_interest (
 	CefT_Plugin_Tp* 	tp, 						/* Transport Plugin Handle			*/
 	CefT_Rx_Elem* 		rx_elem
 ) {
 	CefT_Tx_Elem* tx_elem;
 	int i;
+
+	/* Verify Content */
+	uf(verify_content(rx_elem->msg, rx_elem->msg_len) != 0){
+		fprintf(stderr, "[CONTENTVERIFICATION] content verification failed\n");
+		return (CefC_Pi_Interest_NoSend);
+	}
 
 	/* Updates statistics 		*/
 	m_stat_int_rx++;
@@ -206,7 +213,7 @@ cef_plugin_samptp_interest (
 	Callback for signal indicating that PIT changes
 ----------------------------------------------------------------------------------------*/
 void
-cef_plugin_samptp_delpit (
+cef_plugin_cotentverification_delpit (
 	CefT_Plugin_Tp* 			tp, 				/* Transport Plugin Handle			*/
 	CefT_Rx_Elem_Sig_DelPit* 	info
 ) {
@@ -218,12 +225,12 @@ cef_plugin_samptp_delpit (
 	Callback for post process
 ----------------------------------------------------------------------------------------*/
 void
-cef_plugin_samptp_destroy (
+cef_plugin_cotentverification_destroy (
 	CefT_Plugin_Tp* 	tp 							/* Transport Plugin Handle			*/
 ) {
 	/* Outputs statistics 		*/
 	if (m_stat_output_f) {
-		fprintf (stderr, "[SAMPTP STATISTICS]\n");
+		fprintf (stderr, "[CONTENTVERIFICATION STATISTICS]\n");
 		fprintf (stderr, " Rx Interests : "FMTU64"\n", m_stat_int_rx);
 		fprintf (stderr, " Tx Interests : "FMTU64"\n", m_stat_int_tx);
 		fprintf (stderr, " Rx Cobs      : "FMTU64"\n", m_stat_cob_rx);
