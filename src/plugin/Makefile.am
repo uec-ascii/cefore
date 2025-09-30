@@ -40,6 +40,7 @@ endif # CEFDBG_ENABLE
 if SAMPTP_ENABLE
 AM_CFLAGS+=-DCefC_Plugin_Samptp
 AM_CSOURCES+=transport/samptp/cef_plugin_samptp.c
+AM_CSOURCES+=transport/samptp/content_verification_lib.c
 endif # SAMPTP_ENABLE
 
 
