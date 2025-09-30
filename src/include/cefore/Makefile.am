@@ -37,10 +37,6 @@ if CONPUB_ENABLE
 CEF_HEADER+=cef_conpub.h
 endif # CONPUB_ENABLE
 
-if CONTENTVERIFICATION_ENABLE
-CEF_HEADER+=cef_contentverification.h
-endif # CONTENTVERIFICATION_ENABLE
-
 includedir=$(CEFORE_DIR_PATH)include/cefore
 include_HEADERS=$(CEF_HEADER)
 

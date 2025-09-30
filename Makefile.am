@@ -28,7 +28,7 @@
 #
 
 # set distcheck configure flag
-DISTCHECK_CONFIGURE_FLAGS=--enable-debug --enable-csmgr --enable-cache --enable-samptp --enable-contentverification --enable-conpub--enable-interest-return
+DISTCHECK_CONFIGURE_FLAGS=--enable-debug --enable-csmgr --enable-cache --enable-samptp --enable-conpub--enable-interest-return
 
 EXTRA_DIST=apps doc LICENSE Readme.md
 
