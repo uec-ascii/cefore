@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <csmgrd/csmgrd_plugin.h>
+#include <cefore/cef_frame.h>
 
 int verify_content(CsmgrdT_Content_Entry* entry){
     // とりあえずログを出力するだけの例
@@ -11,37 +12,6 @@ int verify_content(CsmgrdT_Content_Entry* entry){
         return;
     }
 
-    // msgとnameを文字列として扱うために各lenまでをコピーしてヌル終端する
-    unsigned char msg_buf[entry->msg_len + 1];
-    unsigned char name_buf[entry->name_len + 1];
-    memcpy(msg_buf, entry->msg, entry->msg_len);
-    memcpy(name_buf, entry->name, entry->name_len);
-    // 1文字ずつ確認していき、ヌル終端が最後以外にあったら半角スペースで置き換える
-    for (size_t i = 0; i < entry->msg_len; i++) {
-        if (msg_buf[i] == '\0' && i != entry->msg_len - 1) {
-            msg_buf[i] = ' ';
-        }
-    }
-    for (size_t i = 0; i < entry->name_len; i++) {
-        if (name_buf[i] == '\0' && i != entry->name_len - 1) {
-            name_buf[i] = ' ';
-        }
-    }
-    msg_buf[entry->msg_len] = '\0';
-    name_buf[entry->name_len] = '\0';
-
-    fprintf(log_file, "[Content Entry Info]\nmsg:%s:%u\nname:%s:%u\npay_len:%u\nchunk_num:%u\ncache_time:%lu\nexpiry:%lu\nnode:%u\nins_time:%lu\nversion:%s:%u\n\n[Parsed Payload]\n",
-        msg_buf, entry->msg_len,
-        name_buf, entry->name_len,
-        entry->pay_len,
-        entry->chunk_num,
-        entry->cache_time,
-        entry->expiry,
-        entry->node.s_addr,
-        entry->ins_time,
-        entry->version, entry->ver_len
-    );
-
     uint8_t* payload = (uint8_t*)malloc(entry->pay_len);
     if (payload == NULL) {
         fprintf(log_file, "メモリ確保に失敗しました\n");
@@ -50,18 +20,54 @@ int verify_content(CsmgrdT_Content_Entry* entry){
     }
 
     if (get_payload(entry, payload) == 0) {
-        fwrite(payload, 1, entry->pay_len, log_file);
-        fprintf(log_file, "\n");
+        verify_content(entry->name, entry->name_len, payload, entry->pay_len);
+        free(payload);
+        fclose(log_file);
     } else {
         fprintf(log_file, "ペイロードの取得に失敗しました\n");
     }
 
-    free(payload);
 
-    fprintf(log_file, "[EOP]\n\n");
+    return 0;
+}
+
+int verify_content(unsigned char* name, uint16_t name_len, uint8_t* payload, uint16_t pay_len){
+    if (name_len == 0 || pay_len == 0)
+    {
+        // nameまたはpayloadの長さが0なら何もしない
+        return -1;
+    }
+
+    // とりあえずログを出力するだけの例
+    FILE *log_file = fopen("/tmp/content_verification.log", "a");
+    if (log_file == NULL) {
+        perror("ログファイルを開けませんでした");
+        return -1;
+    }
+
+    unsigned char name_buf[name_len + 1];
+    memcpy(name_buf, name, name_len);
+    if(name_buf==NULL){
+        fprintf(log_file, "メモリ確保に失敗しました\n");
+        fclose(log_file);
+        return -1;
+    }
+    for (size_t i = 0; i < name_len; i++) {
+        if (name_buf[i] == '\0' && i != name_len - 1) {
+            name_buf[i] = ' ';
+        }
+    }
+    name_buf[name_len] = '\0';
+
+    fprintf(log_file, "[Content Entry Info]\nname:%s:%u\n[Payload]\n\n",
+        name_buf, name_len
+    );
+    fwrite(payload, 1, pay_len, log_file);
+    fprintf(log_file, "\n[EOP]\n\n");
 
     fclose(log_file);
 
+    free(name_buf);
 
     return 0;
 }
