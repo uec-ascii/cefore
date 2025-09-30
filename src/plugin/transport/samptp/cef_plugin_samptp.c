@@ -131,6 +131,12 @@ cef_plugin_samptp_cob (
 	uint16_t pay_off;
 	int res;
 
+	/* Verify Content */
+	if(verify_content(rx_elem->msg, rx_elem->msg_len) != 0){
+		fprintf(stderr, "[SAMPTP] content verification failed\n");
+		return (CefC_Pi_Object_NoSend);
+	}
+
 	/* Updates statistics 		*/
 	m_stat_cob_rx++;
 
