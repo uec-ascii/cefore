@@ -44,8 +44,8 @@ endif # SAMPTP_ENABLE
 
 if CONTENTVERIFICATION_ENABLE
 AM_FLAGS+=-DCefC_Plugin_ContentVerification
-AM_CSOURCES+=transport/contentverification/cef_contentverification.c \
-             transport/contentverification/content_verification_lib.c
+AM_CSOURCES+=contentverification/contentverification/cef_contentverification.c \
+             contentverification/contentverification/content_verification_lib.c
 endif # CONTENTVERIFICATION_ENABLE
 
 lib_LIBRARIES=libcef_plugin.a

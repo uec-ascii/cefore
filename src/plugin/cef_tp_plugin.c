@@ -141,37 +141,6 @@ cef_tp_plugin_init (
 	}
 #endif // CefC_Plugin_Samptp
 
-#ifdef CefC_Plugin_Contentverification
-	{
-		CefT_List* lp 	= NULL;
-		char* lp_param 	= NULL;
-
-		/***** Content Verification 						   *****/
-		lp = cef_plugin_parameter_value_get ("TRANSPORT", "contentverification");
-
-		if (lp) {
-			lp_param = (char*) cef_plugin_list_access (lp, 0);
-
-			if (strcmp (lp_param, "yes") == 0) {
-				work[CefC_T_OPT_TP_CONTENTVERIFICATION].variant 		= CefC_T_OPT_TP_CONTENTVERIFICATION;
-				work[CefC_T_OPT_TP_CONTENTVERIFICATION].tx_que 		= tx_que;
-				work[CefC_T_OPT_TP_CONTENTVERIFICATION].tx_que_high 	= tx_que_high;
-				work[CefC_T_OPT_TP_CONTENTVERIFICATION].tx_que_low 	= tx_que_low;
-				work[CefC_T_OPT_TP_CONTENTVERIFICATION].tx_que_mp 	= tx_que_mp;
-				work[CefC_T_OPT_TP_CONTENTVERIFICATION].init 			= cef_plugin_contentverification_init;
-				work[CefC_T_OPT_TP_CONTENTVERIFICATION].cob 			= cef_plugin_contentverification_cob;
-
-				if (work[CefC_T_OPT_TP_CONTENTVERIFICATION].init) {
-					(*work[CefC_T_OPT_TP_CONTENTVERIFICATION].init) (
-							&work[CefC_T_OPT_TP_CONTENTVERIFICATION], arg_ptr);
-				}
-				/* Use OPT_SEQNUM */
-				cef_frame_set_opt_seqnum_f (CefC_OptSeqnum_Use);
-			}
-		}
-	}
-#endif // CefC_Plugin_Cotentverification
-
 	return (1);
 }
 
