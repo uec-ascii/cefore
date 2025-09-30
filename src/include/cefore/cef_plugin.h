@@ -82,6 +82,7 @@
 #define CefC_T_OPT_TP_L2MCTP			0x0004		/* Low-Latency MuliCast Transport	*/
 #define CefC_T_OPT_TP_ARTEMISTP			0x0005		/* Fast Recovery Transport			*/
 #define CefC_T_OPT_TP_NUM				0x0006
+#define CefC_T_OPT_TP_CONTENTVERIFICATION	0x0007		/* Content Verification          	*/
 
 /*---------------------------------------------------------
 	Common
