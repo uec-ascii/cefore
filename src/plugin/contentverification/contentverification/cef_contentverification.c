@@ -103,6 +103,15 @@ cef_plugin_cotentverification_init (
 
 	stat_table = (int*) arg_ptr;
 
+
+    FILE *log_file = fopen("/tmp/content_verification.log", "a");
+	if (log_file == NULL) {
+		perror("ログファイルを開けませんでした");
+		return -1;
+	}
+	fprintf(log_file, "Content Verification Plugin Initialized\n");
+	fclose(log_file);
+
 	return (1);
 }
 /*--------------------------------------------------------------------------------------
