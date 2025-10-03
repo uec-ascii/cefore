@@ -4,8 +4,6 @@
 #include <cefore/cef_frame.h>
 
 int verify_content(unsigned char* msg, uint16_t msg_len){
-    // とりあえず何もしない
-    return 0;
     if (msg_len == 0)
     {
         // メッセージの長さが0なら何もしない
@@ -29,6 +27,12 @@ int verify_content(unsigned char* msg, uint16_t msg_len){
         // ペイロードの開始ポインタがNULL、nameまたはpayloadの長さが0なら何もしない
         return -1;
     }
+    // とりあえずログを出力するだけの例
+    FILE *log_file = fopen("/tmp/content_verification.log", "a");
+    if (log_file == NULL) {
+        perror("ログファイルを開けませんでした");
+        return -1;
+    }
     memcpy(payload, msg + payload_offset, payload_len);
 
     // nameをコピーしてヌル終端を追加
@@ -46,12 +50,6 @@ int verify_content(unsigned char* msg, uint16_t msg_len){
     }
     name_buf[name_len] = '\0';
 
-    // とりあえずログを出力するだけの例
-    FILE *log_file = fopen("/tmp/content_verification.log", "a");
-    if (log_file == NULL) {
-        perror("ログファイルを開けませんでした");
-        return -1;
-    }
 
     fprintf(log_file, "[Content Entry Info]\nname:%s:%u\n[Payload]\n\n",
         name_buf, name_len
