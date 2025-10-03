@@ -4,6 +4,8 @@
 #include <cefore/cef_frame.h>
 
 int verify_content(unsigned char* msg, uint16_t msg_len){
+    // とりあえず何もしない
+    return 0;
     if (msg_len == 0)
     {
         // メッセージの長さが0なら何もしない
