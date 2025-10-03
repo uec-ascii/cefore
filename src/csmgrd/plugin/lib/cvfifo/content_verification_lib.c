@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <cefore/cef_frame.h>
+#include <openssl/sha.h>
 
 int verify_content(unsigned char* msg, uint16_t msg_len){
     if (msg_len == 0)
@@ -50,14 +51,40 @@ int verify_content(unsigned char* msg, uint16_t msg_len){
     }
     name_buf[name_len] = '\0';
 
+    // payloadをopenssh/sha.hのSHA256でハッシュ化
+    unsigned char hash[SHA256_DIGEST_LENGTH];
+    if (compute_sha256(payload, payload_len, hash) != 0) {
+        fprintf(log_file, "SHA256の計算に失敗しました\n");
+        fclose(log_file);
+        return -1;
+    }
 
-    fprintf(log_file, "[Content Entry Info]\nname:%s:%u\n[Payload]\n\n",
+    
+    fprintf(log_file, "[Content Entry Info]\nname:%s:%u\n[Payload]\n",
         name_buf, name_len
     );
     fwrite(payload, 1, payload_len, log_file);
-    fprintf(log_file, "\n[EOP]\n\n");
+    fprintf(log_file, "\n[SHA256 Hash]\n");
+    for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
+        fprintf(log_file, "%02x", hash[i]);
+    }
+    fprintf(log_file, "\n\n");
 
     fclose(log_file);
 
+    return 0;
+}
+
+int compute_sha256(unsigned char* data, size_t data_len, unsigned char* out_hash){
+    SHA256_CTX sha256;
+    if (SHA256_Init(&sha256) == 0) {
+        return -1;
+    }
+    if (SHA256_Update(&sha256, data, data_len) == 0) {
+        return -1;
+    }
+    if (SHA256_Final(out_hash, &sha256) == 0) {
+        return -1;
+    }
     return 0;
 }
