@@ -31,7 +31,7 @@ int verify_content(unsigned char* msg, uint16_t msg_len){
 
     // nameをコピーしてヌル終端を追加
     unsigned char name_buf[name_len + 1];
-    memcpy(name_buf, name, name_len);
+    memcpy(name_buf, msg + name_offset, name_len);
     if(name_buf==NULL){
         fprintf(log_file, "メモリ確保に失敗しました\n");
         fclose(log_file);
@@ -58,8 +58,6 @@ int verify_content(unsigned char* msg, uint16_t msg_len){
     fprintf(log_file, "\n[EOP]\n\n");
 
     fclose(log_file);
-
-    free(name_buf);
 
     return 0;
 }
