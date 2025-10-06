@@ -63,7 +63,7 @@ int insert_hashmap(HashMap* map, const unsigned char* hashkey, const unsigned ch
     return 0; // 成功
 }
 
-int exists_in_hashmap(HashMap* map, const unsigned char* hashkey, unsigned char* data, size_t data_len) {
+int exists_in_hashmap(HashMap* map, const unsigned char* hashkey, const unsigned char* data, const size_t data_len) {
     if (map == NULL || map->table == NULL) {
         return 0; // ハッシュマップが初期化されていない
     }
@@ -71,11 +71,7 @@ int exists_in_hashmap(HashMap* map, const unsigned char* hashkey, unsigned char*
     Node* current = map->table[hash];
     while (current != NULL) {
         if (memcmp(current->data, data, data_len) == 0) {
-            // 見つかった場合、データをコピーして返す
-            if (data != NULL && data_len != NULL && *data_len >= current->data_len) {
-                memcpy(data, current->data, current->data_len);
-                *data_len = current->data_len;
-            }
+            // 見つかった場合、1を返す
             return 1; // 存在する
         }
         current = current->next;
