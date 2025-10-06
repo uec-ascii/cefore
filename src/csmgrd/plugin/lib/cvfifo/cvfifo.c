@@ -84,6 +84,8 @@ static int              cache_count;        /* number of cache entries          
 static FifofT_Entry*     cache_entry_list;   /* list for cache entry                     */
 static int*             empty_entry_list;   /* list for empty cache entry               */
 
+static HashMap content_map;               /* content verification map                 */
+
 /****************************************************************************************
  Static Function Declaration
  ****************************************************************************************/
@@ -94,9 +96,7 @@ static void fifo_set (int new_index);
 static void fifo_relink_neighbors_of (int hole_idx);
 
 /****************************************************************************************
- public variables
  ****************************************************************************************/
-HashMap content_map;
 
 /*--------------------------------------------------------------------------------------
 	Init API
@@ -303,7 +303,7 @@ static void fifo_relink_neighbors_of (int hole_idx) {
     if (hole_idx == fifo_head_index) {
         fifo_head_index = next_idx;
     } else {
-    cache_entry_list[prev_idx].next = next_idx;
+        cache_entry_list[prev_idx].next = next_idx;
     }
     if (hole_idx == fifo_tail_index) {
         fifo_tail_index = prev_idx;
