@@ -80,7 +80,7 @@ int exists_in_hashmap(HashMap* map, const unsigned char* hashkey, const unsigned
 }
 
 
-int verify_content(HashMap* map, unsigned char* msg, uint16_t msg_len, uint32_t chunk_num){
+int verify_content(HashMap* map, const unsigned char* msg, uint16_t msg_len, uint32_t chunk_num){
     if (msg_len == 0)
     {
         // メッセージの長さが0なら何もしない
@@ -155,7 +155,7 @@ int verify_content(HashMap* map, unsigned char* msg, uint16_t msg_len, uint32_t 
     fprintf(log_file, "[Packet Info]\n");
     fwrite(packet_info, 1, packet_info_len, log_file);
     fprintf(log_file, "\n");
-    if (exists_in_hashmap(&map, hash, packet_info, packet_info_len) == 1) {
+    if (exists_in_hashmap(map, hash, packet_info, packet_info_len) == 1) {
         fprintf(log_file, "コンテンツはデータベースに一致します。\n");
     } else {
         fprintf(log_file, "コンテンツはデータベースに一致しません。\n");
