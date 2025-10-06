@@ -149,6 +149,14 @@ int verify_content(unsigned char* msg, uint16_t msg_len){
 
     fclose(log_file);
 
+    // コンテンツ検証
+    if (exists_in_hashmap(&content_map, hash, NULL, NULL)) {
+        fprintf(log_file, "コンテンツはデータベースに一致します。\n");
+    } else {
+        fprintf(log_file, "コンテンツはデータベースに一致しません。\n");
+        return -1;
+    }
+
     return 0;
 }
 
