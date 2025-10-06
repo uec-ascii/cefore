@@ -139,7 +139,18 @@ init (
     
     /* Creates lookup table */
     crlib_lookup_table_init (capacity);
+
+    /* Create content verification table */
+    HashMap content_map;
+    memset(&content_map, 0, sizeof(HashMap));
+    init_hashmap(&content_map, 100003); // 100003 is a prime number
     
+    /* テスト用データの作成 */
+    /* key: dc51b8c96c2d745df3bd5590d990230a482fd247123599548e0632fdbf97fc22 value: ccnx:/server/file chunk:0 */
+    unsigned char test_key[] = "dc51b8c96c2d745df3bd5590d990230a482fd247123599548e0632fdbf97fc22";
+    unsigned char test_value[] = "ccnx:/server/file:0";
+    insert_hashmap(&content_map, test_key, test_value, sizeof(test_value));
+
 	return (0);
 }
 
@@ -166,6 +177,7 @@ destroy (
     fifo_head_index = -1;
     fifo_tail_index = -1;
     crlib_lookup_table_destroy ();
+    free_hashmap(&content_map);
 }
 
 /*--------------------------------------------------------------------------------------

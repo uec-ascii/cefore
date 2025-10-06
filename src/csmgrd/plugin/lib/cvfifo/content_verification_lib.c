@@ -3,6 +3,83 @@
 #include <stdint.h>
 #include <cefore/cef_frame.h>
 #include <openssl/sha.h>
+#include "content_verification_lib.h"
+
+int init_hashmap(HashMap* map, size_t size) {
+    if (map == NULL || size == 0) {
+        return -1; // 無効な引数
+    }
+    map->size = size;
+    map->table = calloc(size, sizeof(Node*));
+    if (map->table == NULL) {
+        return -1; // メモリ確保失敗
+    }
+    return 0; // 成功
+}
+
+int free_hashmap(HashMap* map) {
+    for (size_t i = 0; i < map->size; i++) {
+        Node* current = map->table[i];
+        while (current != NULL) {
+            Node* temp = current;
+            current = current->next;
+            free(temp->data);
+            free(temp);
+        }
+    }
+    free(map->table);
+    map->table = NULL;
+    map->size = 0;
+    return 0; // 成功
+}
+
+size_t hash_index(const unsigned char* hashkey, size_t map_size) {
+    return (*(uint32_t*)hashkey) % map_size;
+}
+
+int insert_hashmap(HashMap* map, const unsigned char* hashkey, const unsigned char* data, size_t data_len) {
+    if (map->table == NULL) {
+        return -1; // ハッシュマップが初期化されていない
+    }
+    // hashkeyにはSHA-256のハッシュ値が入る前提。SHA-256の前半32ビットを切り出して整数とし、ハッシュマップの長さで割った余りをインデックスとする
+    size_t hash = hash_index(hashkey, map->size);
+    // 新しいノードを作成してリストの先頭に追加
+    Node* new_node = malloc(sizeof(Node));
+    if (new_node == NULL) {
+        return -1; // メモリ確保失敗
+    }
+    new_node->data = malloc(data_len);
+    if (new_node->data == NULL) {
+        free(new_node);
+        return -1; // メモリ確保失敗
+    }
+    memcpy(new_node->data, data, data_len);
+    new_node->data_len = data_len;
+    new_node->next = map->table[hash];
+    map->table[hash] = new_node;
+    return 0; // 成功
+}
+
+int exists_in_hashmap(HashMap* map, const unsigned char* hashkey, const unsigned char* data, size_t* data_len) {
+    if (map->table == NULL) {
+        return 0; // ハッシュマップが初期化されていない
+    }
+    size_t hash = hash_index(hashkey, map->size);
+    Node* current = map->table[hash];
+    while (current != NULL) {
+        if (memcmp(current->data, hashkey, SHA256_DIGEST_LENGTH) == 0) {
+            // 見つかった場合、データをコピーして返す
+            if (data != NULL && data_len != NULL && *data_len >= current->data_len) {
+                memcpy(data, current->data, current->data_len);
+                *data_len = current->data_len;
+            }
+            return 1; // 存在する
+        }
+        current = current->next;
+    }
+    return 0; // 存在しない
+}
+
 
 int verify_content(unsigned char* msg, uint16_t msg_len){
     if (msg_len == 0)
