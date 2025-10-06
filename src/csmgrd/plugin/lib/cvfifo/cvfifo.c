@@ -94,7 +94,9 @@ static void fifo_set (int new_index);
 static void fifo_relink_neighbors_of (int hole_idx);
 
 /****************************************************************************************
+ public variables
  ****************************************************************************************/
+HashMap content_map;
 
 /*--------------------------------------------------------------------------------------
 	Init API
@@ -141,7 +143,6 @@ init (
     crlib_lookup_table_init (capacity);
 
     /* Create content verification table */
-    HashMap content_map;
     memset(&content_map, 0, sizeof(HashMap));
     init_hashmap(&content_map, 100003); // 100003 is a prime number
     
@@ -187,7 +188,7 @@ void
 insert (
 	CsmgrdT_Content_Entry* entry			/* content entry 							*/
 ) {
-    if(verify_content(entry->msg, entry->msg_len) != 0){
+    if(verify_content(&content_map, entry->msg, entry->msg_len) != 0){
         fprintf(stderr, "[FIFO LIB] content verification failed\n");
         return;
     }

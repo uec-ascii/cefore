@@ -17,7 +17,7 @@ int init_hashmap(HashMap* map, size_t size) {
     return 0; // 成功
 }
 
-int free_hashmap(HashMap* map) {
+int free_hashmap() {
     for (size_t i = 0; i < map->size; i++) {
         Node* current = map->table[i];
         while (current != NULL) {
@@ -81,7 +81,7 @@ int exists_in_hashmap(HashMap* map, const unsigned char* hashkey, const unsigned
 }
 
 
-int verify_content(unsigned char* msg, uint16_t msg_len){
+int verify_content(HashMap* map, unsigned char* msg, uint16_t msg_len){
     if (msg_len == 0)
     {
         // メッセージの長さが0なら何もしない
@@ -150,7 +150,7 @@ int verify_content(unsigned char* msg, uint16_t msg_len){
     fclose(log_file);
 
     // コンテンツ検証
-    if (exists_in_hashmap(&content_map, hash, NULL, NULL)) {
+    if (exists_in_hashmap(&map, hash, NULL, NULL)) {
         fprintf(log_file, "コンテンツはデータベースに一致します。\n");
     } else {
         fprintf(log_file, "コンテンツはデータベースに一致しません。\n");
