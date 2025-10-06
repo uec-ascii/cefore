@@ -172,7 +172,7 @@ int verify_content(HashMap* map, unsigned char* msg, uint16_t msg_len, uint32_t 
     return 0;
 }
 
-int compute_sha256(unsigned char* data, size_t data_len, unsigned char* out_hash){
+int compute_sha256(const unsigned char* data, size_t data_len, unsigned char* out_hash){
     SHA256_CTX sha256;
     if (SHA256_Init(&sha256) == 0) {
         return -1;
