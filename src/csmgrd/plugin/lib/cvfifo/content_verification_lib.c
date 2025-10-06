@@ -17,7 +17,10 @@ int init_hashmap(HashMap* map, size_t size) {
     return 0; // 成功
 }
 
-int free_hashmap() {
+int free_hashmap(HashMap* map) {
+    if (map == NULL) {
+        return -1; // 無効な引数
+    }
     for (size_t i = 0; i < map->size; i++) {
         Node* current = map->table[i];
         while (current != NULL) {
@@ -38,7 +41,7 @@ size_t hash_index(const unsigned char* hashkey, size_t map_size) {
 }
 
 int insert_hashmap(HashMap* map, const unsigned char* hashkey, const unsigned char* data, size_t data_len) {
-    if (map->table == NULL) {
+    if (map == NULL || map->table == NULL) {
         return -1; // ハッシュマップが初期化されていない
     }
     // hashkeyにはSHA-256のハッシュ値が入る前提。SHA-256の前半32ビットを切り出して整数とし、ハッシュマップの長さで割った余りをインデックスとする
@@ -60,14 +63,14 @@ int insert_hashmap(HashMap* map, const unsigned char* hashkey, const unsigned ch
     return 0; // 成功
 }
 
-int exists_in_hashmap(HashMap* map, const unsigned char* hashkey, const unsigned char* data, size_t* data_len) {
-    if (map->table == NULL) {
+int exists_in_hashmap(HashMap* map, const unsigned char* hashkey, unsigned char* data, size_t data_len) {
+    if (map == NULL || map->table == NULL) {
         return 0; // ハッシュマップが初期化されていない
     }
     size_t hash = hash_index(hashkey, map->size);
     Node* current = map->table[hash];
     while (current != NULL) {
-        if (memcmp(current->data, hashkey, SHA256_DIGEST_LENGTH) == 0) {
+        if (memcmp(current->data, data, data_len) == 0) {
             // 見つかった場合、データをコピーして返す
             if (data != NULL && data_len != NULL && *data_len >= current->data_len) {
                 memcpy(data, current->data, current->data_len);
@@ -81,7 +84,7 @@ int exists_in_hashmap(HashMap* map, const unsigned char* hashkey, const unsigned
 }
 
 
-int verify_content(HashMap* map, unsigned char* msg, uint16_t msg_len){
+int verify_content(HashMap* map, unsigned char* msg, uint16_t msg_len, uint32_t chunk_num){
     if (msg_len == 0)
     {
         // メッセージの長さが0なら何もしない
@@ -121,11 +124,6 @@ int verify_content(HashMap* map, unsigned char* msg, uint16_t msg_len){
         fclose(log_file);
         return -1;
     }
-    for (size_t i = 0; i < name_len; i++) {
-        if (name_buf[i] == '\0' && i != name_len - 1) {
-            name_buf[i] = ' ';
-        }
-    }
     name_buf[name_len] = '\0';
 
     // payloadをopenssh/sha.hのSHA256でハッシュ化
@@ -136,7 +134,6 @@ int verify_content(HashMap* map, unsigned char* msg, uint16_t msg_len){
         return -1;
     }
 
-    
     fprintf(log_file, "[Content Entry Info]\nname:%s:%u\n[Payload]\n",
         name_buf, name_len
     );
@@ -145,18 +142,33 @@ int verify_content(HashMap* map, unsigned char* msg, uint16_t msg_len){
     for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
         fprintf(log_file, "%02x", hash[i]);
     }
-    fprintf(log_file, "\n\n");
+    fprintf(log_file, "\n");
 
-    fclose(log_file);
-
+    
     // コンテンツ検証
-    if (exists_in_hashmap(&map, hash, NULL, NULL)) {
+    // chunk_numの10進数での桁数
+    int chunk_num_digits = snprintf(NULL, 0, "%u", chunk_num);
+    size_t packet_info_len = name_len + 1 + chunk_num_digits + 1;
+    unsigned char* packet_info = malloc(packet_info_len);
+    if(packet_info == NULL){
+        fprintf(log_file, "メモリ確保に失敗しました\n");
+        return -1;
+    }
+    snprintf((char*)packet_info, packet_info_len, "%s:%u\0", name_buf, chunk_num);
+    // packet_infoをハッシュ化
+    fprintf(log_file, "[Packet Info]\n");
+    fwrite(packet_info, 1, packet_info_len, log_file);
+    fprintf(log_file, "\n");
+    if (exists_in_hashmap(&map, hash, packet_info, packet_info_len) == 1) {
         fprintf(log_file, "コンテンツはデータベースに一致します。\n");
     } else {
         fprintf(log_file, "コンテンツはデータベースに一致しません。\n");
         return -1;
     }
-
+    
+    fprintf(log_file, "----------\n");
+    free(packet_info);
+    fclose(log_file);
     return 0;
 }
 

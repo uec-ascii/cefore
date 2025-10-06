@@ -149,7 +149,7 @@ init (
     /* テスト用データの作成 */
     /* key: dc51b8c96c2d745df3bd5590d990230a482fd247123599548e0632fdbf97fc22 value: ccnx:/server/file chunk:0 */
     unsigned char test_key[] = "dc51b8c96c2d745df3bd5590d990230a482fd247123599548e0632fdbf97fc22";
-    unsigned char test_value[] = "ccnx:/server/file:0";
+    unsigned char test_value[] = "\0\1\0\6server\0\1\0\4file:0"; // Cefore内部のパース関数で解釈できる形式のコンテンツ名+":"+チャンク番号
     insert_hashmap(&content_map, test_key, test_value, sizeof(test_value));
 
 	return (0);
@@ -162,16 +162,15 @@ void
 destroy (
 	void
 ) {
-    cache_count = 0;
-	cache_cap 		= 0;
-	store_api 		= NULL;
-	remove_api 		= NULL;
-
 	for (int i=0; i< cache_cap; i++) {
 		if (cache_entry_list[i].key != NULL) {
 			free (cache_entry_list[i].key);
 		}
 	}
+    cache_count = 0;
+	cache_cap 		= 0;
+	store_api 		= NULL;
+	remove_api 		= NULL;
 
     free (cache_entry_list);
     free (empty_entry_list);
@@ -188,7 +187,7 @@ void
 insert (
 	CsmgrdT_Content_Entry* entry			/* content entry 							*/
 ) {
-    if(verify_content(&content_map, entry->msg, entry->msg_len) != 0){
+    if(verify_content(&content_map, entry->msg, entry->msg_len, entry->chunk_num) != 0){
         fprintf(stderr, "[FIFO LIB] content verification failed\n");
         return;
     }
