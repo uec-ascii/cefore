@@ -148,7 +148,11 @@ init (
     
     /* テスト用データの作成 */
     /* key: dc51b8c96c2d745df3bd5590d990230a482fd247123599548e0632fdbf97fc22 value: ccnx:/server/file chunk:0 */
-    unsigned char test_key[] = "dc51b8c96c2d745df3bd5590d990230a482fd247123599548e0632fdbf97fc22";
+    unsigned char test_key[32];
+    const char *hex_string = "dc51b8c96c2d745df3bd5590d990230a482fd247123599548e0632fdbf97fc22";
+    for (int i = 0; i < 32; i++) {
+        sscanf(&hex_string[i * 2], "%2hhx", &test_key[i]);
+    }
     unsigned char test_value[] = "\0\1\0\6server\0\1\0\4file:0"; // Cefore内部のパース関数で解釈できる形式のコンテンツ名+":"+チャンク番号
     insert_hashmap(&content_map, test_key, test_value, sizeof(test_value));
 
