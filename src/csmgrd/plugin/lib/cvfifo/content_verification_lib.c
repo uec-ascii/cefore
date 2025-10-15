@@ -45,14 +45,12 @@ int insert_hashmap(HashMap* map, const unsigned char* hashkey, const unsigned ch
         return -1; // ハッシュマップが初期化されていない
     }
     FILE *log_file = fopen("/tmp/content_verification.log", "a");
-    fprintf(log_file, "Exists in HashMap\nhashkey: ");
+    fprintf(log_file, "Insert Hashmap\nhashkey: ");
     for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
         fprintf(log_file, "%02x", hashkey[i]);
     }
     fprintf(log_file, "\ndata: ");
-    for (size_t i = 0; i < data_len; i++) {
-        fprintf(log_file, "%02x", data[i]);
-    }
+    fwrite(log_file, data, data_len);
     fprintf(log_file, "\ndata_len: %zu\n", data_len);
     // hashkeyにはSHA-256のハッシュ値が入る前提。SHA-256の前半32ビットを切り出して整数とし、ハッシュマップの長さで割った余りをインデックスとする
     size_t hash = hash_index(hashkey, map->size);
@@ -85,9 +83,7 @@ int exists_in_hashmap(HashMap* map, const unsigned char* hashkey, const unsigned
         fprintf(log_file, "%02x", hashkey[i]);
     }
     fprintf(log_file, "\ndata: ");
-    for (size_t i = 0; i < data_len; i++) {
-        fprintf(log_file, "%02x", data[i]);
-    }
+    fwrite(log_file, data, data_len);
     fprintf(log_file, "\ndata_len: %zu\n", data_len);
     size_t hash = hash_index(hashkey, map->size);
     fprintf(log_file, "Hash Index: %zu\n", hash);
