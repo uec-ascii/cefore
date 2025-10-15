@@ -195,20 +195,19 @@ int verify_content(HashMap* map, const unsigned char* msg, uint16_t msg_len, uin
     fwrite(packet_info, 1, packet_info_len, log_file);
     fprintf(log_file, "\n");
     fclose(log_file);
+    int ret = 0;
     if (exists_in_hashmap(map, hash, packet_info, packet_info_len) == 1) {
         log_file = fopen("/tmp/content_verification.log", "a");
         fprintf(log_file, "コンテンツはデータベースに一致します。\n");
-    fprintf(log_file, "----------\n");
-        fclose(log_file);
     } else {
         log_file = fopen("/tmp/content_verification.log", "a");
         fprintf(log_file, "コンテンツはデータベースに一致しません。\n");
-    fprintf(log_file, "----------\n");
-        fclose(log_file);
-        return -1;
+        ret = -1;
     }
+    fclose(log_file);
+    fprintf(log_file, "----------\n");
     free(packet_info);
-    return 0;
+    return ret;
 }
 
 int compute_sha256(const unsigned char* data, size_t data_len, unsigned char* out_hash){
