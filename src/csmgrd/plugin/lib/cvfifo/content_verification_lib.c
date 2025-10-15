@@ -44,8 +44,20 @@ int insert_hashmap(HashMap* map, const unsigned char* hashkey, const unsigned ch
     if (map == NULL || map->table == NULL) {
         return -1; // ハッシュマップが初期化されていない
     }
+    FILE *log_file = fopen("/tmp/content_verification.log", "a");
+    fprintf(log_file, "Exists in HashMap\nhashkey: ");
+    for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
+        fprintf(log_file, "%02x", hashkey[i]);
+    }
+    fprintf(log_file, "\ndata: ");
+    for (size_t i = 0; i < data_len; i++) {
+        fprintf(log_file, "%02x", data[i]);
+    }
+    fprintf(log_file, "\ndata_len: %zu\n", data_len);
     // hashkeyにはSHA-256のハッシュ値が入る前提。SHA-256の前半32ビットを切り出して整数とし、ハッシュマップの長さで割った余りをインデックスとする
     size_t hash = hash_index(hashkey, map->size);
+    fprintf(log_file, "Hash Index: %zu\n", hash);
+    fclose(log_file);
     // 新しいノードを作成してリストの先頭に追加
     Node* new_node = malloc(sizeof(Node));
     if (new_node == NULL) {
@@ -67,15 +79,35 @@ int exists_in_hashmap(HashMap* map, const unsigned char* hashkey, const unsigned
     if (map == NULL || map->table == NULL) {
         return 0; // ハッシュマップが初期化されていない
     }
+    FILE *log_file = fopen("/tmp/content_verification.log", "a");
+    fprintf(log_file, "Exists in HashMap\nhashkey: ");
+    for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
+        fprintf(log_file, "%02x", hashkey[i]);
+    }
+    fprintf(log_file, "\ndata: ");
+    for (size_t i = 0; i < data_len; i++) {
+        fprintf(log_file, "%02x", data[i]);
+    }
+    fprintf(log_file, "\ndata_len: %zu\n", data_len);
     size_t hash = hash_index(hashkey, map->size);
+    fprintf(log_file, "Hash Index: %zu\n", hash);
     Node* current = map->table[hash];
     while (current != NULL) {
+        fprintf(log_file, "Comparing with entry data: ");
+        for (size_t i = 0; i < current->data_len; i++) {
+            fprintf(log_file, "%02x", current->data[i]);
+        }
+        fprintf(log_file, "\n");
         if (memcmp(current->data, data, data_len) == 0) {
             // 見つかった場合、1を返す
+            fprintf(log_file, "Match found\n");
+            fclose(log_file);
             return 1; // 存在する
         }
         current = current->next;
     }
+    fprintf(log_file, "No match found\n");
+    fclose(log_file);
     return 0; // 存在しない
 }
 
