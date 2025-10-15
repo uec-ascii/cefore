@@ -204,8 +204,8 @@ int verify_content(HashMap* map, const unsigned char* msg, uint16_t msg_len, uin
         fprintf(log_file, "コンテンツはデータベースに一致しません。\n");
         ret = -1;
     }
-    fclose(log_file);
     fprintf(log_file, "----------\n");
+    fclose(log_file);
     free(packet_info);
     return ret;
 }
