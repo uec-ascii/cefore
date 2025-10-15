@@ -152,15 +152,9 @@ int verify_content(HashMap* map, const unsigned char* msg, uint16_t msg_len, uin
     // payloadをコピー
     memcpy(payload, msg + payload_offset, payload_len);
 
-    // nameをコピーしてヌル終端を追加
-    unsigned char name_buf[name_len + 1];
+    // nameをバッファにコピー（バイナリとして扱う）
+    unsigned char name_buf[name_len];
     memcpy(name_buf, msg + name_offset, name_len);
-    if(name_buf==NULL){
-        fprintf(log_file, "メモリ確保に失敗しました\n");
-        fclose(log_file);
-        return -1;
-    }
-    name_buf[name_len] = '\0';
 
     // payloadをopenssh/sha.hのSHA256でハッシュ化
     unsigned char hash[SHA256_DIGEST_LENGTH];
@@ -190,7 +184,12 @@ int verify_content(HashMap* map, const unsigned char* msg, uint16_t msg_len, uin
         fprintf(log_file, "メモリ確保に失敗しました\n");
         return -1;
     }
-    snprintf((char*)packet_info, packet_info_len, "%s:%u\0", name_buf, chunk_num);
+    // packet_infoにname_buf（バイナリ）をコピー
+    memcpy(packet_info, name_buf, name_len);
+    // ':'を追加
+    packet_info[name_len] = ':';
+    // chunk_numを文字列で連結
+    snprintf((char*)(packet_info + name_len + 1), packet_info_len - name_len - 1, "%u", chunk_num);
     // packet_infoをハッシュ化
     fprintf(log_file, "[Packet Info]\n");
     fwrite(packet_info, 1, packet_info_len, log_file);
