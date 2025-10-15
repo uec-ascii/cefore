@@ -50,7 +50,7 @@ int insert_hashmap(HashMap* map, const unsigned char* hashkey, const unsigned ch
         fprintf(log_file, "%02x", hashkey[i]);
     }
     fprintf(log_file, "\ndata: ");
-    fwrite(log_file, data, data_len);
+    fwrite(data, 1, data_len, log_file);
     fprintf(log_file, "\ndata_len: %zu\n", data_len);
     // hashkeyにはSHA-256のハッシュ値が入る前提。SHA-256の前半32ビットを切り出して整数とし、ハッシュマップの長さで割った余りをインデックスとする
     size_t hash = hash_index(hashkey, map->size);
@@ -83,7 +83,7 @@ int exists_in_hashmap(HashMap* map, const unsigned char* hashkey, const unsigned
         fprintf(log_file, "%02x", hashkey[i]);
     }
     fprintf(log_file, "\ndata: ");
-    fwrite(log_file, data, data_len);
+    fwrite(data, 1, data_len, log_file);
     fprintf(log_file, "\ndata_len: %zu\n", data_len);
     size_t hash = hash_index(hashkey, map->size);
     fprintf(log_file, "Hash Index: %zu\n", hash);
