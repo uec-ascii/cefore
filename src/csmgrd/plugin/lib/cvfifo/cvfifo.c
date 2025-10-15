@@ -205,11 +205,10 @@ insert (
     // if(verify_content(&content_map, entry->msg, entry->msg_len, entry->chunk_num) != 0){
     //     fprintf(stderr, "[FIFO LIB] content verification failed\n");
     // }else{
-    //     printf("Content verification succeeded\n");
-        if (cache_count >= cache_cap) {
-            fifo_remove_entry (fifo_tail_index, 0);
-        }
-        fifo_store_entry (entry, empty_entry_list[cache_count]);
+    //     if (cache_count >= cache_cap) {
+    //         fifo_remove_entry (fifo_tail_index, 0);
+    //     }
+    //     fifo_store_entry (entry, empty_entry_list[cache_count]);
     // }
 }
 
