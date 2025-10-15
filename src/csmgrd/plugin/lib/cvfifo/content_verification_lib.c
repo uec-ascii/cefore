@@ -138,6 +138,18 @@ int verify_content(HashMap* map, const unsigned char* msg, uint16_t msg_len, uin
         perror("ログファイルを開けませんでした");
         return -1;
     }
+    fprintf(log_file, "Verifying Content\n");
+    fprintf(log_file, "Message: ");
+    fwrite(msg, 1, msg_len, log_file);
+    fprintf(log_file, "\nMessage Length: %u\n", msg_len);
+    fprintf(log_file, "Name: ");
+    fwrite(msg + name_offset, 1, name_len, log_file);
+    fprintf(log_file, "\nName Length: %u\n", name_len);
+    fprintf(log_file, "Payload: ");
+    fwrite(payload, 1, payload_len, log_file);
+    fprintf(log_file, "\nPayload Length: %u\n", payload_len);
+    fprintf(log_file, "Chunk Number: %u\n", chunk_num);
+    // payloadをコピー
     memcpy(payload, msg + payload_offset, payload_len);
 
     // nameをコピーしてヌル終端を追加
