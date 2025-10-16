@@ -191,26 +191,29 @@ void
 insert (
 	CsmgrdT_Content_Entry* entry			/* content entry 							*/
 ) {
-    FILE *log_file = fopen("/tmp/content_verification.log", "a");
-    if (log_file == NULL) {
-        perror("ログファイルを開けませんでした");
-        return;
-    }
-    fprintf(log_file, "[Insert Entry] Name: ");
-    fwrite(entry->name, 1, entry->name_len, log_file);
-    fprintf(log_file, ":%u\nMsg: ", entry->chunk_num);
-    fwrite(entry->msg, 1, entry->msg_len, log_file);
-    fprintf(log_file, "\n");
-    fclose(log_file);
-    // if(verify_content(&content_map, entry->msg, entry->msg_len, entry->chunk_num) != 0){
-    //     fprintf(stderr, "[FIFO LIB] content verification failed\n");
-    // }else{
-    //     if (cache_count >= cache_cap) {
-    //         fifo_remove_entry (fifo_tail_index, 0);
-    //     }
-    //     fifo_store_entry (entry, empty_entry_list[cache_count]);
+    // FILE *log_file = fopen("/tmp/content_verification.log", "a");
+    // if (log_file == NULL) {
+    //     perror("ログファイルを開けませんでした");
+    //     return;
     // }
-}
+    // fprintf(log_file, "[Insert Entry] Name: ");
+    // fwrite(entry->name, 1, entry->name_len, log_file);
+    // fprintf(log_file, ":%u\nMsg: ", entry->chunk_num);
+    // fwrite(entry->msg, 1, entry->msg_len, log_file);
+    // fprintf(log_file, "\n");
+    // fclose(log_file);
+    // if(verify_content(&content_map, entry->msg, entry->msg_len, entry->chunk_num) != 0){
+        //     fprintf(stderr, "[FIFO LIB] content verification failed\n");
+        // }else{
+            if (cache_count >= cache_cap) {
+                fifo_remove_entry (fifo_tail_index, 0);
+            }
+            fifo_store_entry (entry, empty_entry_list[cache_count]);
+            // }
+        while(cache_count>0){
+            fifo_remove_entry (fifo_tail_index, 0); // 試験用。キャッシュを空にする。これでcsmgrが消されなければ詰み。
+        }
+    }
 
 /*--------------------------------------------------------------------------------------
 	Erase API
