@@ -86,8 +86,7 @@ static int*             empty_entry_list;   /* list for empty cache entry       
 
 static HashMap content_map;               /* content verification map                 */
 
-/* mem_cache.cのmem_cs_removeを外部参照 */
-extern void mem_cs_remove(unsigned char* key, int key_len);
+/* 外部参照は不要 - remove_apiを使用 */
 
 /****************************************************************************************
  Static Function Declaration
@@ -220,8 +219,8 @@ insert (
         
     //     fprintf(stderr, "[CVFIFO] Content verification failed - entry rejected\n");
         
-    //     /* mem_cs_removeを呼び出してメモリキャッシュから完全削除 */
-    //     mem_cs_remove(key, key_len);
+    //     /* remove_apiを呼び出してキャッシュから完全削除 */
+    //     (*remove_api)(key, key_len);
         
     //     return;
     // }
@@ -229,7 +228,6 @@ insert (
     /* 検証成功 - 通常通りキャッシュに登録 */
     if (log_file != NULL) {
         fprintf(log_file, "[Verification SUCCESS] Caching entry\n");
-        fclose(log_file);
     }
     
     if (cache_count >= cache_cap) {
@@ -244,8 +242,8 @@ insert (
         int next_idx = current_entry->next;
         
         if (current_entry->key != NULL && current_entry->key_len > 0) {
-            /* メモリキャッシュから削除 */
-            mem_cs_remove(current_entry->key, current_entry->key_len);
+            /* remove_apiでキャッシュから削除 (mem_cache or filesystem_cache) */
+            (*remove_api)(current_entry->key, current_entry->key_len);
             
             /* FIFOテーブルから削除 */
             fifo_remove_entry(current_idx, 0);
