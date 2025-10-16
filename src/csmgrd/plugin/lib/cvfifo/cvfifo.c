@@ -86,6 +86,9 @@ static int*             empty_entry_list;   /* list for empty cache entry       
 
 static HashMap content_map;               /* content verification map                 */
 
+/* mem_cache.cのmem_cs_removeを外部参照 */
+extern void mem_cs_remove(unsigned char* key, int key_len);
+
 /****************************************************************************************
  Static Function Declaration
  ****************************************************************************************/
@@ -191,29 +194,74 @@ void
 insert (
 	CsmgrdT_Content_Entry* entry			/* content entry 							*/
 ) {
-    // FILE *log_file = fopen("/tmp/content_verification.log", "a");
-    // if (log_file == NULL) {
-    //     perror("ログファイルを開けませんでした");
+    unsigned char key[CsmgrdC_Key_Max];
+    int key_len;
+    
+    /* キーの作成 */
+    key_len = csmgrd_name_chunknum_concatenate (
+                    entry->name, entry->name_len, entry->chunk_num, key);
+    
+    /* コンテンツ検証処理 */
+    FILE *log_file = fopen("/tmp/content_verification.log", "a");
+    if (log_file != NULL) {
+        fprintf(log_file, "[Insert Entry] Name: ");
+        for (int i = 0; i < entry->name_len; i++) {
+            fprintf(log_file, "%02x", entry->name[i]);
+        }
+        fprintf(log_file, " Chunk: %u\n", entry->chunk_num);
+    }
+    
+    // if(verify_content(&content_map, entry->msg, entry->msg_len, entry->chunk_num) != 0){
+    //     /* 検証失敗 - キャッシュに登録せず完全に削除 */
+    //     if (log_file != NULL) {
+    //         fprintf(log_file, "[Verification FAILED] Deleting entry completely\n");
+    //         fclose(log_file);
+    //     }
+        
+    //     fprintf(stderr, "[CVFIFO] Content verification failed - entry rejected\n");
+        
+    //     /* mem_cs_removeを呼び出してメモリキャッシュから完全削除 */
+    //     mem_cs_remove(key, key_len);
+        
     //     return;
     // }
-    // fprintf(log_file, "[Insert Entry] Name: ");
-    // fwrite(entry->name, 1, entry->name_len, log_file);
-    // fprintf(log_file, ":%u\nMsg: ", entry->chunk_num);
-    // fwrite(entry->msg, 1, entry->msg_len, log_file);
-    // fprintf(log_file, "\n");
-    // fclose(log_file);
-    // if(verify_content(&content_map, entry->msg, entry->msg_len, entry->chunk_num) != 0){
-        //     fprintf(stderr, "[FIFO LIB] content verification failed\n");
-        // }else{
-            if (cache_count >= cache_cap) {
-                fifo_remove_entry (fifo_tail_index, 0);
-            }
-            fifo_store_entry (entry, empty_entry_list[cache_count]);
-            // }
-        while(cache_count>0){
-            fifo_remove_entry (fifo_tail_index, 0); // 試験用。キャッシュを空にする。これでcsmgrが消されなければ詰み。
-        }
+    
+    /* 検証成功 - 通常通りキャッシュに登録 */
+    if (log_file != NULL) {
+        fprintf(log_file, "[Verification SUCCESS] Caching entry\n");
+        fclose(log_file);
     }
+    
+    if (cache_count >= cache_cap) {
+        fifo_remove_entry (fifo_tail_index, 0);
+    }
+    fifo_store_entry (entry, empty_entry_list[cache_count]);
+
+    /* すべて削除する動作確認 - FIFOテーブルを1エントリずつ確認して削除 */
+    int current_idx = fifo_tail_index;
+    while (current_idx != -1) {
+        FifofT_Entry* current_entry = &cache_entry_list[current_idx];
+        int next_idx = current_entry->next;
+        
+        if (current_entry->key != NULL && current_entry->key_len > 0) {
+            /* メモリキャッシュから削除 */
+            mem_cs_remove(current_entry->key, current_entry->key_len);
+            
+            /* FIFOテーブルから削除 */
+            fifo_remove_entry(current_idx, 0);
+            
+            if (log_file != NULL) {
+                fprintf(log_file, "[DELETE] Removed entry at index %d\n", current_idx);
+            }
+        }
+        
+        current_idx = next_idx;
+    }
+    
+    if (log_file != NULL) {
+        fclose(log_file);
+    }
+}
 
 /*--------------------------------------------------------------------------------------
 	Erase API
