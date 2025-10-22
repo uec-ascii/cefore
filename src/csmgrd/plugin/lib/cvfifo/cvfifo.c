@@ -193,12 +193,12 @@ void
 insert (
 	CsmgrdT_Content_Entry* entry			/* content entry 							*/
 ) {
-    // unsigned char key[CsmgrdC_Key_Max];
-    // int key_len;
+    unsigned char key[CsmgrdC_Key_Max];
+    int key_len;
     
-    // /* キーの作成 */
-    // key_len = csmgrd_name_chunknum_concatenate (
-    //                 entry->name, entry->name_len, entry->chunk_num, key);
+    /* キーの作成 */
+    key_len = csmgrd_name_chunknum_concatenate (
+                    entry->name, entry->name_len, entry->chunk_num, key);
     
     /* コンテンツ検証処理 */
     FILE *log_file = fopen("/tmp/content_verification.log", "a");
@@ -219,8 +219,8 @@ insert (
         
     //     fprintf(stderr, "[CVFIFO] Content verification failed - entry rejected\n");
         
-    //     /* remove_apiを呼び出してキャッシュから完全削除 */
-    //     (*remove_api)(key, key_len);
+        /* remove_apiを呼び出してキャッシュから完全削除 */
+        (*remove_api)(key, key_len);
         
     //     return;
     // }
