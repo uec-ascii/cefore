@@ -193,12 +193,12 @@ void
 insert (
 	CsmgrdT_Content_Entry* entry			/* content entry 							*/
 ) {
-    unsigned char key[CsmgrdC_Key_Max];
-    int key_len;
+    // unsigned char key[CsmgrdC_Key_Max];
+    // int key_len;
     
-    /* キーの作成 */
-    key_len = csmgrd_name_chunknum_concatenate (
-                    entry->name, entry->name_len, entry->chunk_num, key);
+    // /* キーの作成 */
+    // key_len = csmgrd_name_chunknum_concatenate (
+    //                 entry->name, entry->name_len, entry->chunk_num, key);
     
     /* コンテンツ検証処理 */
     FILE *log_file = fopen("/tmp/content_verification.log", "a");
@@ -225,36 +225,48 @@ insert (
     //     return;
     // }
     
-    /* 検証成功 - 通常通りキャッシュに登録 */
+    // /* 検証成功 - 通常通りキャッシュに登録 */
+    // if (log_file != NULL) {
+    //     fprintf(log_file, "[Verification SUCCESS] Caching entry\n");
+    // }
+    
+    // 動作検証：csmgrdで絶対にキャッシュしない
     if (log_file != NULL) {
+        fprintf(log_file, "Avoid caching entry.\n");
+        fclose(log_file);
+    }
+    return;
+
+    log_file = fopen("/tmp/content_verification.log", "a");
+    if (log_file != NULL) {
+        // このログは出力されないはず
         fprintf(log_file, "[Verification SUCCESS] Caching entry\n");
     }
-    
     if (cache_count >= cache_cap) {
         fifo_remove_entry (fifo_tail_index, 0);
     }
     fifo_store_entry (entry, empty_entry_list[cache_count]);
 
-    /* すべて削除する動作確認 - FIFOテーブルを1エントリずつ確認して削除 */
-    int current_idx = fifo_tail_index;
-    while (current_idx != -1) {
-        FifofT_Entry* current_entry = &cache_entry_list[current_idx];
-        int next_idx = current_entry->next;
+    // /* すべて削除する動作確認 - FIFOテーブルを1エントリずつ確認して削除 */
+    // int current_idx = fifo_tail_index;
+    // while (current_idx != -1) {
+    //     FifofT_Entry* current_entry = &cache_entry_list[current_idx];
+    //     int next_idx = current_entry->next;
         
-        if (current_entry->key != NULL && current_entry->key_len > 0) {
-            /* remove_apiでキャッシュから削除 (mem_cache or filesystem_cache) */
-            (*remove_api)(current_entry->key, current_entry->key_len);
+    //     if (current_entry->key != NULL && current_entry->key_len > 0) {
+    //         /* remove_apiでキャッシュから削除 (mem_cache or filesystem_cache) */
+    //         (*remove_api)(current_entry->key, current_entry->key_len);
             
-            /* FIFOテーブルから削除 */
-            fifo_remove_entry(current_idx, 0);
+    //         /* FIFOテーブルから削除 */
+    //         fifo_remove_entry(current_idx, 0);
             
-            if (log_file != NULL) {
-                fprintf(log_file, "[DELETE] Removed entry at index %d\n", current_idx);
-            }
-        }
+    //         if (log_file != NULL) {
+    //             fprintf(log_file, "[DELETE] Removed entry at index %d\n", current_idx);
+    //         }
+    //     }
         
-        current_idx = next_idx;
-    }
+    //     current_idx = next_idx;
+    // }
     
     if (log_file != NULL) {
         fclose(log_file);
