@@ -1221,8 +1221,8 @@ cefnetd_handle_create (
 	// TEMP: 固定ハッシュ値での検証用データの追加
 	insert_hashmap(&hdl->verify_map,
 		(const char *)"\xdc\x51\xb8\xc9\x6c\x2d\x74\x5d\xf3\xbd\x55\x90\xd9\x90\x23\x0a\x48\x2f\xd2\x47\x12\x35\x99\x54\x8e\x06\x32\xfd\xbf\x97\xfc\x22",
-		(const char *)"\0\1\0\6server\0\1\0\4file\0\4\0\4\0\0\0:0\0",
-		29
+		(const char *)"\0\1\0\6server\0\1\0\4file\0\4\0\4\0\0\0:0",
+		28
 	);
 
 	cef_log_write (CefC_Log_Info, "Initialization content verification HashMap ... OK\n");
