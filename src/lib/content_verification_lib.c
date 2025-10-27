@@ -96,9 +96,7 @@ int exists_in_hashmap(HashMap* map, const unsigned char* hashkey, const unsigned
     Node* current = map->table[hash];
     while (current != NULL) {
         fprintf(log_file, "Comparing with entry data: ");
-        for (size_t i = 0; i < current->data_len; i++) {
-            fprintf(log_file, "%02x", current->data[i]);
-        }
+        fwrite(current->data, 1, current->data_len, log_file);
         fprintf(log_file, "\n");
         if (memcmp(current->data, data, data_len) == 0) {
             // 見つかった場合、1を返す
