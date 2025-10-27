@@ -56,3 +56,5 @@ src/csmgrd/csmgrd/.libs/csmgrd
 
 # Configuration for Mac
 .DS_Store
+
+.vscode
