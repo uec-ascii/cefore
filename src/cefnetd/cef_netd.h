@@ -70,6 +70,7 @@
 #include <cefore/cef_pthread.h>
 
 #include <cefore/cef_ccninfo.h>
+#include <cefore/content_verification_lib.h>
 
 /****************************************************************************************
  Macros
@@ -330,6 +331,9 @@ typedef struct {
 
 	uint	 			tx_que_size;
 	CefT_Mp_Handle 		tx_que_mp;
+
+	/********** Content Verification ***********/
+	HashMap				verify_map;			/* HashMap for content verification */
 
 } CefT_Netd_Handle;
 

@@ -31,7 +31,8 @@
 CEF_HEADER=cef_client.h cef_csmgr.h cef_csmgr_stat.h cef_ccninfo.h \
 	cef_define.h cef_face.h cef_fib.h cef_frame.h cef_hash.h cef_mpool.h \
 	cef_pit.h cef_log.h cef_print.h cef_rngque.h cef_valid.h \
-	cef_mem_cache.h cef_rcvbuf.h cef_pthread.h cef_plugin.h cef_plugin_com.h
+	cef_mem_cache.h cef_rcvbuf.h cef_pthread.h cef_plugin.h cef_plugin_com.h \
+	content_verification_lib.h
 
 if CONPUB_ENABLE
 CEF_HEADER+=cef_conpub.h

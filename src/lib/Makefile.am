@@ -37,7 +37,7 @@ endif #OPENSSL_STATIC
 
 AM_CSOURCES=cef_hash.c cef_client.c cef_fib.c cef_pit.c cef_face.c cef_frame.c \
 	cef_log.c cef_print.c cef_mpool.c cef_rngque.c cef_valid.c cef_pthread.c
-AM_CSOURCES+=cef_mem_cache.c cef_csmgr.c cef_csmgr_stat.c
+AM_CSOURCES+=cef_mem_cache.c cef_csmgr.c cef_csmgr_stat.c content_verification_lib.c
 
 # check debug build
 if CEFDBG_ENABLE

@@ -41,6 +41,7 @@
 #endif //__APPLE
 #include "cef_netd.h"
 #include "cef_status.h"
+#include <cefore/content_verification_lib.h> // Content verification library
 #ifdef __APPLE__
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -1210,6 +1211,14 @@ cefnetd_handle_create (
 	}
 
 
+	/* Initialize content verification HashMap */
+	if (init_hashmap(&hdl->verify_map, 256) != 0) {
+		cefnetd_handle_destroy (hdl);
+		cef_log_write (CefC_Log_Error, "%s Failed to initialize content verification HashMap\n", __func__);
+		return (NULL);
+	}
+	cef_log_write (CefC_Log_Info, "Initialization content verification HashMap ... OK\n");
+
 	return (hdl);
 }
 /*--------------------------------------------------------------------------------------
@@ -1311,6 +1320,10 @@ cefnetd_handle_destroy (
 #if CefC_IsEnable_ContentStore
 	cef_csmgr_stat_destroy (&hdl->cs_stat);
 #endif // CefC_IsEnable_ContentStore
+
+	/* Free content verification HashMap */
+	free_hashmap(&hdl->verify_map);
+	cef_log_write (CefC_Log_Info, "Free content verification HashMap ... OK\n");
 
 	free (hdl);
 
@@ -3780,6 +3793,12 @@ cefnetd_incoming_object_process (
 #ifdef CefC_Debug
 		cef_dbg_write (CefC_Dbg_Fine, "Detects the invalid Content Object\n");
 #endif // CefC_Debug
+		return (-1);
+	}
+
+	// TODO: ここにコンテンツ検証を追加。
+	if(verify_content(&hdl->content_verif, &pm, msg, payload_len + header_len) < 0) {
+		cef_log_write (CefC_Log_Info, "Drops an unverified Object.\n");
 		return (-1);
 	}
 
