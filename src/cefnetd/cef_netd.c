@@ -3797,7 +3797,7 @@ cefnetd_incoming_object_process (
 	}
 
 	// TODO: ここにコンテンツ検証を追加。
-	if(verify_content(&hdl->content_verif, pm.name, pm.name_len, pm.chunk_num, pm.payload, pm.payload_len) < 0) {
+	if(verify_content(&hdl->verify_map, pm.name, pm.name_len, pm.chunk_num, pm.payload, pm.payload_len) < 0) {
 		cef_log_write (CefC_Log_Info, "Drops an unverified Object.\n");
 		return (-1);
 	}
