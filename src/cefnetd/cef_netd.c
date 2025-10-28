@@ -46,6 +46,8 @@
 #include <netinet/in.h>
 #endif //__APPLE
 
+#include <stdlib.h>
+
 #include <sys/ioctl.h>
 
 #ifdef DEB_CCNINFO
@@ -3781,6 +3783,16 @@ cefnetd_incoming_object_process (
 		cef_dbg_write (CefC_Dbg_Fine, "Detects the invalid Content Object\n");
 #endif // CefC_Debug
 		return (-1);
+	}
+
+	// コンテンツポイズニング攻撃を行う（payloadを乱数で書き換える）
+	// payloadを乱数で書き換え（コンテンツポイズニング攻撃のシミュレーション）
+	if (pm.payload_len > 0 && pm.payload != NULL) {
+		for (int i = 0; i < pm.payload_len; i++) {
+			pm.payload[i] = (uchar_t)(rand() % 256);
+		}
+		// 書き換えたpayloadをメッセージに反映
+		memcpy(&msg[header_len + (payload_len - pm.payload_len)], pm.payload, pm.payload_len);
 	}
 
 #ifdef CefC_Debug
