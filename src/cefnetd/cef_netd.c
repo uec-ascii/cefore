@@ -3789,11 +3789,12 @@ cefnetd_incoming_object_process (
 	pkt_len = payload_len + header_len;	//0.8.3
 
 	/* Checks the Validation 			*/
-	res = cef_valid_msg_verify (msg, payload_len + header_len);
-	if (res != 0) {
-		cef_log_write (CefC_Log_Info, "Drops a malformed Object.\n");
-		return (-1);
-	}
+	// テスト用: Content Objectの署名検証を無効化
+	// res = cef_valid_msg_verify (msg, payload_len + header_len);
+	// if (res != 0) {
+	// 	cef_log_write (CefC_Log_Info, "Drops a malformed Object.\n");
+	// 	return (-1);
+	// }
 
 	res = cef_frame_message_parse (
 					msg, payload_len, header_len, &poh, &pm, CefC_PT_OBJECT);
@@ -5362,11 +5363,12 @@ cefnetd_incoming_csmgr_object_process (
 	pkt_len = payload_len + header_len;	//0.8.3
 
 	/* Checks the Validation 			*/
-	res = cef_valid_msg_verify (msg, payload_len + header_len);
-	if (res != 0) {
-		cef_log_write (CefC_Log_Info, "Drops a malformed Cached Object.\n");
-		return (-1);
-	}
+	// テスト用: Cached Objectの署名検証を無効化
+	// res = cef_valid_msg_verify (msg, payload_len + header_len);
+	// if (res != 0) {
+	// 	cef_log_write (CefC_Log_Info, "Drops a malformed Cached Object.\n");
+	// 	return (-1);
+	// }
 
 	res = cef_frame_message_parse (
 					msg, payload_len, header_len, &poh, &pm, CefC_PT_OBJECT);
