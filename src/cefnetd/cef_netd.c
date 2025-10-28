@@ -3805,10 +3805,7 @@ cefnetd_incoming_object_process (
 	}
 
 	// TODO: ここにコンテンツ検証を追加。
-	if(verify_content(&hdl->verify_map, pm.name, pm.name_len, pm.chunk_num, pm.payload, pm.payload_len) < 0) {
-		cef_log_write (CefC_Log_Info, "Drops an unverified Object.\n");
-		return (-1);
-	}
+	// コンテンツ検証はキャッシュ部分に移動
 
 #ifdef CefC_Debug
 	cef_dbg_buff_write_name (CefC_Dbg_Finer,
@@ -3880,6 +3877,10 @@ cefnetd_incoming_object_process (
 		/*--------------------------------------------------------------------
 			Content Store
 		----------------------------------------------------------------------*/
+		if(verify_content(&hdl->verify_map, pm.name, pm.name_len, pm.chunk_num, pm.payload, pm.payload_len) < 0) {
+			cef_log_write (CefC_Log_Info, "Content verification failed. Skip caching.\n");
+			goto SKIP_CACHE;
+		}
 		/* Stores Content Object to Content Store 		*/
 		if ((pm.expiry > 0) && (hdl->cs_stat->cache_type != CefC_Default_Cache_Type)) {
 #ifdef CefC_Debug
@@ -3888,6 +3889,7 @@ cefnetd_incoming_object_process (
 			cef_csmgr_excache_item_put (
 				hdl->cs_stat, msg, payload_len + header_len, peer_faceid, &pm, &poh);
 		}
+SKIP_CACHE:
 #endif // CefC_IsEnable_ContentStore
 
 		pit_handle = hdl->pit;
