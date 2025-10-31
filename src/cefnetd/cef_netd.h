@@ -313,6 +313,9 @@ typedef struct {
 	int		cefstatus_pipe_fd[2];
 	unsigned char *app_rsp_msg;
 
+	/********** content verification pipe **********/
+	int		verify_pipe_fd;
+
 	/********** Forwarding Strategy Plugin **********/
 	CefT_Plugin_Fwd_Strtgy*		fwd_strtgy_hdl;
 	void*						fwd_strtgy_lib;
