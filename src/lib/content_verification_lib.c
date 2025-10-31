@@ -112,7 +112,7 @@ int exists_in_hashmap(HashMap* map, const unsigned char* hashkey, const unsigned
 }
 
 
-int verify_content(HashMap* map, const unsigned char* name, uint16_t name_len, uint32_t chunk_num, const unsigned char* payload, uint16_t payload_len) {
+int verify_content(HashMap* map, const unsigned char* name, uint16_t name_len, const unsigned char* payload, uint16_t payload_len) {
     FILE *log_file = fopen("/tmp/content_verification.log", "a");
     if (log_file == NULL) {
         perror("ログファイルを開けませんでした");
@@ -130,13 +130,12 @@ int verify_content(HashMap* map, const unsigned char* name, uint16_t name_len, u
     fprintf(log_file, "Name: ");
     fwrite(name, 1, name_len, log_file);
     fprintf(log_file, "\nName Length: %u\n", name_len);
-    fprintf(log_file, "Chunk Number: %u\n", chunk_num);
     fprintf(log_file, "Payload Length: %u\n", payload_len);
     fprintf(log_file, "Payload: ");
     fwrite(payload, 1, payload_len, log_file);
     fprintf(log_file, "\n");
 
-    // payloadをopenssh/sha.hのSHA256でハッシュ化
+    // payloadのSHA256ハッシュを計算
     unsigned char hash[SHA256_DIGEST_LENGTH];
     if (compute_sha256(payload, payload_len, hash) != 0) {
         fprintf(log_file, "SHA256の計算に失敗しました\n");
@@ -150,40 +149,21 @@ int verify_content(HashMap* map, const unsigned char* name, uint16_t name_len, u
     }
     fprintf(log_file, "\n");
 
-    
-    // コンテンツ検証
-    // chunk_numの10進数での桁数
-    int chunk_num_digits = snprintf(NULL, 0, "%u", chunk_num);
-    size_t packet_info_len = name_len + 1 + chunk_num_digits + 1;
-    unsigned char* packet_info = malloc(packet_info_len);
-    if(packet_info == NULL){
-        fprintf(log_file, "メモリ確保に失敗しました\n");
-        fclose(log_file);
-        return -1;
-    }
-    // packet_infoにname（バイナリ）をコピー
-    memcpy(packet_info, name, name_len);
-    // ':'を追加
-    packet_info[name_len] = ':';
-    // chunk_numを文字列で連結
-    snprintf((char*)(packet_info + name_len + 1), packet_info_len - name_len - 1, "%u", chunk_num);
-    // packet_infoをハッシュ化
-    fprintf(log_file, "[Packet Info]\n");
-    fwrite(packet_info, 1, packet_info_len, log_file);
+    // コンテンツ検証（nameをそのまま使用）
+    fprintf(log_file, "[Verification Data]\n");
+    fwrite(name, 1, name_len, log_file);
     fprintf(log_file, "\n");
-    fclose(log_file);
+    
     int ret = 0;
-    if (exists_in_hashmap(map, hash, packet_info, packet_info_len) == 1) {
-        log_file = fopen("/tmp/content_verification.log", "a");
+    if (exists_in_hashmap(map, hash, name, name_len) == 1) {
         fprintf(log_file, "コンテンツはデータベースに一致します。\n");
     } else {
-        log_file = fopen("/tmp/content_verification.log", "a");
         fprintf(log_file, "コンテンツはデータベースに一致しません。\n");
         ret = -1;
     }
     fprintf(log_file, "----------\n");
     fclose(log_file);
-    free(packet_info);
+    
     return ret;
 }
 
