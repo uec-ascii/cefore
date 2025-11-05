@@ -3925,7 +3925,7 @@ cefnetd_incoming_object_process (
 			// 予めコンテンツ名をuriに変換
 		uchar_t uri[CefC_NAME_BUFSIZ];
 		cefnetd_name_to_uri (&pm, uri, sizeof(uri));
-        if(verify_content(&hdl->verify_map, uri, strlen(uri), pm.chunk_num, pm.payload, pm.payload_len) < 0) {
+        if(verify_content(&hdl->verify_map, uri, strlen(uri), pm.payload, pm.payload_len) < 0) {
 			cef_log_write (CefC_Log_Info, "Content verification failed. Skip caching.\n");
 			goto SKIP_CACHE;
 		}
