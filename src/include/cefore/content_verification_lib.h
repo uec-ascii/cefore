@@ -23,7 +23,7 @@ int free_hashmap(HashMap* map);
 size_t hash_index(const unsigned char* hashkey, size_t map_size);
 int insert_hashmap(HashMap* map, const unsigned char* hashkey, const unsigned char* data, size_t data_len);
 int exists_in_hashmap(HashMap* map, const unsigned char* hashkey, const unsigned char* data, size_t data_len);
-int verify_content(HashMap* map, const unsigned char* name, uint16_t name_len, uint32_t chunk_num, const unsigned char* payload, uint16_t payload_len);
+int verify_content(HashMap* map, const unsigned char* name, uint16_t name_len, const unsigned char* payload, uint16_t payload_len);
 int compute_sha256(const unsigned char* data, size_t data_len, unsigned char* out_hash);
 
 #endif /* CEFORE_CONTENT_VERIFICATION_LIB_H */

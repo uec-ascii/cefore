@@ -42,6 +42,9 @@
 #include "cef_netd.h"
 #include "cef_status.h"
 #include <cefore/content_verification_lib.h> // Content verification library
+#include <sys/stat.h>  // mkfifo
+#include <fcntl.h>     // open, O_RDONLY, O_NONBLOCK
+#include <unistd.h>    // unlink
 #ifdef __APPLE__
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -626,6 +629,14 @@ cefnetd_input_from_local_process (
 );
 
 /*--------------------------------------------------------------------------------------
+	Handles content verification updates from FIFO
+----------------------------------------------------------------------------------------*/
+static int									/* Returns 0 on success, -1 on error		*/
+cefnetd_input_verify_update_process (
+	CefT_Netd_Handle* hdl					/* cefnetd handle							*/
+);
+
+/*--------------------------------------------------------------------------------------
 	Handles the elements of cs_stat TX queue
 ----------------------------------------------------------------------------------------*/
 static int										/* No care now							*/
@@ -821,6 +832,7 @@ cefnetd_handle_create (
 	hdl->Buffer_Cache_Time		= CefC_Default_BUFFER_CACHE_TIME * 1000;
 	hdl->cefstatus_pipe_fd[0]	= -1;
 	hdl->cefstatus_pipe_fd[1]	= -1;
+	hdl->verify_pipe_fd			= -1;
 	//202108
 	hdl->IR_Option				= 0;	//Not
 	memset (hdl->IR_enable, 0, sizeof (hdl->IR_enable));
@@ -1218,14 +1230,25 @@ cefnetd_handle_create (
 		return (NULL);
 	}
 
-	// TEMP: 固定ハッシュ値での検証用データの追加
-	insert_hashmap(&hdl->verify_map,
-		(const char *)"\xdc\x51\xb8\xc9\x6c\x2d\x74\x5d\xf3\xbd\x55\x90\xd9\x90\x23\x0a\x48\x2f\xd2\x47\x12\x35\x99\x54\x8e\x06\x32\xfd\xbf\x97\xfc\x22",
-		(const char *)"\0\1\0\6server\0\1\0\4file\0\4\0\4\0\0\0\0:0",
-		29
-	);
+	/* Create FIFO for content verification updates */
+	char verify_pipe_path[] = "/tmp/cefnetd_verify.fifo";
+	unlink(verify_pipe_path);  // 既存のFIFOがあれば削除
+	if (mkfifo(verify_pipe_path, 0666) == -1) {
+		cefnetd_handle_destroy (hdl);
+		cef_log_write (CefC_Log_Error, "%s Failed to create FIFO for content verification (%s)\n", __func__, strerror(errno));
+		return (NULL);
+	}
+	
+	// FIFOを非ブロッキングモードで開く
+	hdl->verify_pipe_fd = open(verify_pipe_path, O_RDONLY | O_NONBLOCK);
+	if (hdl->verify_pipe_fd == -1) {
+		cefnetd_handle_destroy (hdl);
+		cef_log_write (CefC_Log_Error, "%s Failed to open FIFO for content verification (%s)\n", __func__, strerror(errno));
+		return (NULL);
+	}
 
 	cef_log_write (CefC_Log_Info, "Initialization content verification HashMap ... OK\n");
+	cef_log_write (CefC_Log_Info, "Created FIFO for content verification: %s\n", verify_pipe_path);
 
 	return (hdl);
 }
@@ -1333,6 +1356,13 @@ cefnetd_handle_destroy (
 	free_hashmap(&hdl->verify_map);
 	cef_log_write (CefC_Log_Info, "Free content verification HashMap ... OK\n");
 
+	/* Close and remove FIFO for content verification */
+	if (hdl->verify_pipe_fd != -1) {
+		close(hdl->verify_pipe_fd);
+		hdl->verify_pipe_fd = -1;
+	}
+	unlink("/tmp/cefnetd_verify.fifo");
+
 	free (hdl);
 
 	cef_client_local_sock_name_get (sock_path);
@@ -1399,6 +1429,11 @@ cefnetd_event_dispatch (
 			if (fds[i].revents != 0) {
 				res--;
 				if (fds[i].revents & POLLIN) {
+					// FIFOからのコンテンツ検証更新を処理
+					if (fds[i].fd == hdl->verify_pipe_fd) {
+						cefnetd_input_verify_update_process(hdl);
+						continue;
+					}
 					if (fd_type[i] == CefC_Connection_Type_Local) {
 						continue;
 					}
@@ -1646,6 +1681,15 @@ cefnetd_poll_socket_prepare (
 		res++;
 	}
 #endif // CefC_IsEnable_ContentStore
+
+	/* Add verify_pipe_fd to poll */
+	if (hdl->verify_pipe_fd != -1) {
+		fds[res].events = POLLIN | POLLERR;
+		fds[res].fd = hdl->verify_pipe_fd;
+		fd_type[res] = CefC_Connection_Type_Local;
+		faceids[res] = 0;
+		res++;
+	}
 
 	for (i = 0 ; i < hdl->app_fds_num ; i++) {
 		if (hdl->app_fds[i] != -1) {
@@ -9247,5 +9291,57 @@ cefnetd_config_fib_read (
 	fclose (fp);
 
 	return (1);
+}
+
+/*--------------------------------------------------------------------------------------
+	Handles content verification updates from FIFO
+----------------------------------------------------------------------------------------*/
+static int									/* Returns 0 on success, -1 on error		*/
+cefnetd_input_verify_update_process (
+	CefT_Netd_Handle* hdl					/* cefnetd handle							*/
+) {
+	unsigned char buf[CefC_Max_Length];
+	ssize_t len;
+	
+	// FIFOからデータを読み込む
+	len = read(hdl->verify_pipe_fd, buf, sizeof(buf));
+	
+	if (len <= 0) {
+		if (len == 0 || errno == EAGAIN || errno == EWOULDBLOCK) {
+			// データなし、または非ブロッキングで読み込めない場合は正常
+			return 0;
+		}
+		// エラー発生
+		cef_log_write (CefC_Log_Warn, "Failed to read from verify FIFO: %s\n", strerror(errno));
+		return -1;
+	}
+	
+	// データフォーマット: [hashkey(32bytes)][data_len(4bytes)][data(variable)]
+	if (len < 36) {
+		cef_log_write (CefC_Log_Warn, "Invalid data length from verify FIFO: %zd\n", len);
+		return -1;
+	}
+	
+	unsigned char* hashkey = buf;
+	uint32_t data_len;
+	memcpy(&data_len, buf + 32, sizeof(uint32_t));
+	unsigned char* data = buf + 36;
+	
+	// データ長の妥当性チェック
+	if (36 + data_len != len) {
+		cef_log_write (CefC_Log_Warn, "Data length mismatch in verify FIFO: expected %u, got %zd\n", 
+					   36 + data_len, len);
+		return -1;
+	}
+	
+	// HashMapに追加
+	if (insert_hashmap(&hdl->verify_map, hashkey, data, data_len) != 0) {
+		cef_log_write (CefC_Log_Error, "Failed to insert into verification HashMap\n");
+		return -1;
+	}
+	
+	cef_log_write (CefC_Log_Info, "Added new content verification entry (data_len=%u)\n", data_len);
+	
+	return 0;
 }
 
