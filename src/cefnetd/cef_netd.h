@@ -314,7 +314,8 @@ typedef struct {
 	unsigned char *app_rsp_msg;
 
 	/********** content verification pipe **********/
-	int		verify_pipe_fd;
+	int		verify_pipe_fd;			/* FIFO for receiving updates from Python */
+	int		verify_notify_fd;		/* FIFO for sending failure notifications to Python */
 
 	/********** Forwarding Strategy Plugin **********/
 	CefT_Plugin_Fwd_Strtgy*		fwd_strtgy_hdl;

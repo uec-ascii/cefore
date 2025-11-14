@@ -637,6 +637,17 @@ cefnetd_input_verify_update_process (
 );
 
 /*--------------------------------------------------------------------------------------
+	Sends verification failure notification to Python
+----------------------------------------------------------------------------------------*/
+static int									/* Returns 0 on success, -1 on error		*/
+cefnetd_send_verify_failure_notification (
+	CefT_Netd_Handle* hdl,					/* cefnetd handle							*/
+	const unsigned char* name,				/* Content name								*/
+	uint16_t name_len,						/* Length of name							*/
+	uint16_t faceid							/* Face ID where content came from			*/
+);
+
+/*--------------------------------------------------------------------------------------
 	Handles the elements of cs_stat TX queue
 ----------------------------------------------------------------------------------------*/
 static int										/* No care now							*/
@@ -833,6 +844,7 @@ cefnetd_handle_create (
 	hdl->cefstatus_pipe_fd[0]	= -1;
 	hdl->cefstatus_pipe_fd[1]	= -1;
 	hdl->verify_pipe_fd			= -1;
+	hdl->verify_notify_fd		= -1;
 	//202108
 	hdl->IR_Option				= 0;	//Not
 	memset (hdl->IR_enable, 0, sizeof (hdl->IR_enable));
@@ -1239,7 +1251,7 @@ cefnetd_handle_create (
 		return (NULL);
 	}
 	
-	// FIFOを非ブロッキングモードで開く
+	// FIFOを非ブロッキングモードで開く（Python → Cefore）
 	hdl->verify_pipe_fd = open(verify_pipe_path, O_RDONLY | O_NONBLOCK);
 	if (hdl->verify_pipe_fd == -1) {
 		cefnetd_handle_destroy (hdl);
@@ -1247,8 +1259,25 @@ cefnetd_handle_create (
 		return (NULL);
 	}
 
+	/* Create FIFO for verification failure notifications */
+	char verify_notify_path[] = "/tmp/cefnetd_verify_notify.fifo";
+	unlink(verify_notify_path);  // 既存のFIFOがあれば削除
+	if (mkfifo(verify_notify_path, 0666) == -1) {
+		cefnetd_handle_destroy (hdl);
+		cef_log_write (CefC_Log_Error, "%s Failed to create notification FIFO (%s)\n", __func__, strerror(errno));
+		return (NULL);
+	}
+	
+	// 通知用FIFOを非ブロッキングモードで開く（Cefore → Python）
+	hdl->verify_notify_fd = open(verify_notify_path, O_WRONLY | O_NONBLOCK);
+	if (hdl->verify_notify_fd == -1) {
+		cef_log_write (CefC_Log_Warn, "%s Failed to open notification FIFO (Python may not be running yet)\n", __func__);
+		// Pythonがまだ起動していない可能性があるため、エラーにはしない
+	}
+
 	cef_log_write (CefC_Log_Info, "Initialization content verification HashMap ... OK\n");
 	cef_log_write (CefC_Log_Info, "Created FIFO for content verification: %s\n", verify_pipe_path);
+	cef_log_write (CefC_Log_Info, "Created FIFO for verification notifications: %s\n", verify_notify_path);
 
 	return (hdl);
 }
@@ -1362,6 +1391,12 @@ cefnetd_handle_destroy (
 		hdl->verify_pipe_fd = -1;
 	}
 	unlink("/tmp/cefnetd_verify.fifo");
+	
+	if (hdl->verify_notify_fd != -1) {
+		close(hdl->verify_notify_fd);
+		hdl->verify_notify_fd = -1;
+	}
+	unlink("/tmp/cefnetd_verify_notify.fifo");
 
 	free (hdl);
 
@@ -3855,6 +3890,8 @@ cefnetd_incoming_object_process (
     cefnetd_name_to_uri (&pm, uri, sizeof(uri));
 	if(verify_content(&hdl->verify_map, uri, strlen(uri), pm.payload, pm.payload_len) < 0) {
 		cef_log_write (CefC_Log_Info, "Drops an unverified Object.\n");
+		// Pythonに検証失敗を通知
+		cefnetd_send_verify_failure_notification(hdl, uri, strlen(uri), peer_faceid);
 		return (-1);
 	}
 
@@ -9339,6 +9376,95 @@ cefnetd_input_verify_update_process (
 	}
 	
 	cef_log_write (CefC_Log_Info, "Added new content verification entry (data_len=%u)\n", data_len);
+	
+	return 0;
+}
+
+/*--------------------------------------------------------------------------------------
+	Sends verification failure notification to Python
+----------------------------------------------------------------------------------------*/
+static int									/* Returns 0 on success, -1 on error		*/
+cefnetd_send_verify_failure_notification (
+	CefT_Netd_Handle* hdl,					/* cefnetd handle							*/
+	const unsigned char* name,				/* Content name								*/
+	uint16_t name_len,						/* Length of name							*/
+	uint16_t faceid							/* Face ID where content came from			*/
+) {
+	// 通知用FIFOが開いていない場合はスキップ
+	if (hdl->verify_notify_fd == -1) {
+		// Pythonがまだ起動していない可能性がある。再度開いてみる
+		hdl->verify_notify_fd = open("/tmp/cefnetd_verify_notify.fifo", O_WRONLY | O_NONBLOCK);
+		if (hdl->verify_notify_fd == -1) {
+			// まだ開けない場合はログだけ出力してスキップ
+			cef_log_write (CefC_Log_Debug, "Notification FIFO not available (Python not running?)\n");
+			return -1;
+		}
+	}
+	
+	// Face情報を取得してホスト情報を得る
+	CefT_Face* face = cef_face_get_face_from_faceid(faceid);
+	char host[256] = {0};
+	char protocol[16] = "udp";  // デフォルトはUDP
+	
+	if (face != NULL) {
+		// アドレスを文字列に変換
+		if (face->sa_family == AF_INET) {
+			struct sockaddr_in* sin = (struct sockaddr_in*)&face->saddr;
+			inet_ntop(AF_INET, &sin->sin_addr, host, sizeof(host));
+		} else if (face->sa_family == AF_INET6) {
+			struct sockaddr_in6* sin6 = (struct sockaddr_in6*)&face->saddr;
+			inet_ntop(AF_INET6, &sin6->sin6_addr, host, sizeof(host));
+		}
+		
+		// プロトコルを判定
+		if (face->iftype == CefC_Face_Type_Tcp) {
+			strcpy(protocol, "tcp");
+		}
+	}
+	
+	// 通知データフォーマット: [name_len(2bytes)][name][host_len(2bytes)][host][protocol_len(2bytes)][protocol]
+	unsigned char notify_buf[CefC_Max_Length];
+	size_t offset = 0;
+	
+	// name_lenとname
+	uint16_t name_len_n = htons(name_len);
+	memcpy(notify_buf + offset, &name_len_n, sizeof(uint16_t));
+	offset += sizeof(uint16_t);
+	memcpy(notify_buf + offset, name, name_len);
+	offset += name_len;
+	
+	// host_lenとhost
+	uint16_t host_len = strlen(host);
+	uint16_t host_len_n = htons(host_len);
+	memcpy(notify_buf + offset, &host_len_n, sizeof(uint16_t));
+	offset += sizeof(uint16_t);
+	memcpy(notify_buf + offset, host, host_len);
+	offset += host_len;
+	
+	// protocol_lenとprotocol
+	uint16_t protocol_len = strlen(protocol);
+	uint16_t protocol_len_n = htons(protocol_len);
+	memcpy(notify_buf + offset, &protocol_len_n, sizeof(uint16_t));
+	offset += sizeof(uint16_t);
+	memcpy(notify_buf + offset, protocol, protocol_len);
+	offset += protocol_len;
+	
+	// FIFOに書き込む
+	ssize_t written = write(hdl->verify_notify_fd, notify_buf, offset);
+	if (written != offset) {
+		if (errno == EAGAIN || errno == EWOULDBLOCK) {
+			cef_log_write (CefC_Log_Debug, "Notification FIFO is full, skipping notification\n");
+		} else {
+			cef_log_write (CefC_Log_Warn, "Failed to write notification: %s\n", strerror(errno));
+			// パイプが切断された場合は閉じる
+			close(hdl->verify_notify_fd);
+			hdl->verify_notify_fd = -1;
+		}
+		return -1;
+	}
+	
+	cef_log_write (CefC_Log_Info, "Sent verification failure notification (name_len=%u, host=%s, protocol=%s)\n", 
+				   name_len, host, protocol);
 	
 	return 0;
 }
