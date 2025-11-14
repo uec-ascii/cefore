@@ -9410,10 +9410,17 @@ cefnetd_send_verify_failure_notification (
 	char protocol[16] = "udp";  // デフォルトはUDP
 	
 	if (res > 0) {
+		// デバッグ: 実際のface_info文字列を出力
+		cef_log_write (CefC_Log_Info, "Face info for faceid=%u: [%s]\n", faceid, face_info);
+		
 		// face_infoをパース: "faceid = X protocol host:port"
-		char* prot_start = strchr(face_info, ' ');
+		// 実際のフォーマット例: "faceid = 32 udp 172.20.2.1:9896"
+		char* prot_start = strstr(face_info, " = ");
 		if (prot_start != NULL) {
-			prot_start = strchr(prot_start + 1, ' '); // 2つ目のスペースの後
+			prot_start += 3; // " = " をスキップ
+			
+			// faceidをスキップして次のスペースを見つける
+			prot_start = strchr(prot_start, ' ');
 			if (prot_start != NULL) {
 				prot_start++; // スペースをスキップ
 				
