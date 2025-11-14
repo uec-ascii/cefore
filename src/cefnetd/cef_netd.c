@@ -9396,30 +9396,59 @@ cefnetd_send_verify_failure_notification (
 		hdl->verify_notify_fd = open("/tmp/cefnetd_verify_notify.fifo", O_WRONLY | O_NONBLOCK);
 		if (hdl->verify_notify_fd == -1) {
 			// まだ開けない場合はログだけ出力してスキップ
-			cef_log_write (CefC_Log_Debug, "Notification FIFO not available (Python not running?)\n");
+			cef_log_write (CefC_Log_Info, "Notification FIFO not available (Python not running?)\n");
 			return -1;
 		}
 	}
 	
-	// Face情報を取得してホスト情報を得る
-	CefT_Face* face = cef_face_get_face_from_faceid(faceid);
+	// cef_face_info_getを使ってFace情報を取得
+	// フォーマット: "faceid = X protocol host:port"
+	char face_info[512] = {0};
+	int res = cef_face_info_get(face_info, faceid);
+	
 	char host[256] = {0};
 	char protocol[16] = "udp";  // デフォルトはUDP
 	
-	if (face != NULL) {
-		// アドレスを文字列に変換
-		if (face->sa_family == AF_INET) {
-			struct sockaddr_in* sin = (struct sockaddr_in*)&face->saddr;
-			inet_ntop(AF_INET, &sin->sin_addr, host, sizeof(host));
-		} else if (face->sa_family == AF_INET6) {
-			struct sockaddr_in6* sin6 = (struct sockaddr_in6*)&face->saddr;
-			inet_ntop(AF_INET6, &sin6->sin6_addr, host, sizeof(host));
+	if (res > 0) {
+		// face_infoをパース: "faceid = X protocol host:port"
+		char* prot_start = strchr(face_info, ' ');
+		if (prot_start != NULL) {
+			prot_start = strchr(prot_start + 1, ' '); // 2つ目のスペースの後
+			if (prot_start != NULL) {
+				prot_start++; // スペースをスキップ
+				
+				// protocolを抽出
+				char* host_start = strchr(prot_start, ' ');
+				if (host_start != NULL) {
+					size_t prot_len = host_start - prot_start;
+					if (prot_len < sizeof(protocol)) {
+						strncpy(protocol, prot_start, prot_len);
+						protocol[prot_len] = '\0';
+					}
+					
+					host_start++; // スペースをスキップ
+					
+					// hostを抽出（:portの前まで）
+					char* port_start = strchr(host_start, ':');
+					if (port_start != NULL) {
+						size_t host_len = port_start - host_start;
+						if (host_len < sizeof(host)) {
+							strncpy(host, host_start, host_len);
+							host[host_len] = '\0';
+						}
+					} else {
+						// ポート番号がない場合はそのままコピー
+						strncpy(host, host_start, sizeof(host) - 1);
+					}
+				}
+			}
 		}
-		
-		// プロトコルを判定
-		if (face->iftype == CefC_Face_Type_Tcp) {
-			strcpy(protocol, "tcp");
-		}
+	}
+	
+	// ホスト情報が取得できなかった場合はスキップ
+	if (strlen(host) == 0) {
+		cef_log_write (CefC_Log_Warn, "Failed to get host information for faceid=%u\n", faceid);
+		return -1;
 	}
 	
 	// 通知データフォーマット: [name_len(2bytes)][name][host_len(2bytes)][host][protocol_len(2bytes)][protocol]
@@ -9453,7 +9482,7 @@ cefnetd_send_verify_failure_notification (
 	ssize_t written = write(hdl->verify_notify_fd, notify_buf, offset);
 	if (written != offset) {
 		if (errno == EAGAIN || errno == EWOULDBLOCK) {
-			cef_log_write (CefC_Log_Debug, "Notification FIFO is full, skipping notification\n");
+			cef_log_write (CefC_Log_Info, "Notification FIFO is full, skipping notification\n");
 		} else {
 			cef_log_write (CefC_Log_Warn, "Failed to write notification: %s\n", strerror(errno));
 			// パイプが切断された場合は閉じる
