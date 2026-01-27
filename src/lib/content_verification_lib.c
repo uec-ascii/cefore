@@ -72,6 +72,7 @@ int insert_hashmap(HashMap* map, const unsigned char* hashkey, const unsigned ch
         free(new_node);
         return -1; // メモリ確保失敗
     }
+    memcpy(new_node->key, hashkey, SHA256_DIGEST_LENGTH);
     memcpy(new_node->data, data, data_len);
     new_node->data_len = data_len;
     new_node->next = map->table[hash];
@@ -98,7 +99,8 @@ int exists_in_hashmap(HashMap* map, const unsigned char* hashkey, const unsigned
         fprintf(log_file, "Comparing with entry data: ");
         fwrite(current->data, 1, current->data_len, log_file);
         fprintf(log_file, "\n");
-        if (memcmp(current->data, data, data_len) == 0) {
+        if (memcmp(current->key, hashkey, SHA256_DIGEST_LENGTH) == 0 &&
+            memcmp(current->data, data, data_len) == 0) {
             // 見つかった場合、1を返す
             fprintf(log_file, "Match found\n");
             fclose(log_file);

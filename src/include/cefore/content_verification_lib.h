@@ -6,8 +6,10 @@
 
 #include <stddef.h>  /* size_t */
 #include <stdint.h>  /* uint16_t, uint32_t */
+#include <openssl/sha.h> /* SHA256_DIGEST_LENGTH */
 
 typedef struct _node {
+    unsigned char key[SHA256_DIGEST_LENGTH];
     unsigned char* data;
     unsigned int data_len;
     struct _node* next;
