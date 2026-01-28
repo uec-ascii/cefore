@@ -5,6 +5,9 @@
 #include <openssl/sha.h>
 #include <cefore/content_verification_lib.h>
 
+/* デバッグログを有効にする場合は以下をコメント解除 */
+/* #define CONTENT_VERIFICATION_DEBUG */
+
 int init_hashmap(HashMap* map, size_t size) {
     if (map == NULL || size == 0) {
         return -1; // 無効な引数
@@ -45,23 +48,24 @@ size_t hash_index(const unsigned char* hashkey, size_t map_size) {
 
 int insert_hashmap(HashMap* map, const unsigned char* hashkey, const unsigned char* data, size_t data_len) {
     if (map == NULL || map->table == NULL) {
-        FILE *log_file = fopen("/tmp/content_verification.log", "a");
-        fprintf(log_file, "The hash map is not initialized.\n");
-        fclose(log_file);
         return -1; // ハッシュマップが初期化されていない
     }
-    FILE *log_file = fopen("/tmp/content_verification.log", "a");
-    fprintf(log_file, "Insert Hashmap\nhashkey: ");
-    for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
-        fprintf(log_file, "%02x", hashkey[i]);
-    }
-    fprintf(log_file, "\ndata: ");
-    fwrite(data, 1, data_len, log_file);
-    fprintf(log_file, "\ndata_len: %zu\n", data_len);
     // hashkeyにはSHA-256のハッシュ値が入る前提。SHA-256の前半32ビットを切り出して整数とし、ハッシュマップの長さで割った余りをインデックスとする
     size_t hash = hash_index(hashkey, map->size);
-    fprintf(log_file, "Hash Index: %zu\n", hash);
-    fclose(log_file);
+#ifdef CONTENT_VERIFICATION_DEBUG
+    FILE *log_file = fopen("/tmp/content_verification.log", "a");
+    if (log_file != NULL) {
+        fprintf(log_file, "Insert Hashmap\nhashkey: ");
+        for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
+            fprintf(log_file, "%02x", hashkey[i]);
+        }
+        fprintf(log_file, "\ndata: ");
+        fwrite(data, 1, data_len, log_file);
+        fprintf(log_file, "\ndata_len: %zu\n", data_len);
+        fprintf(log_file, "Hash Index: %zu\n", hash);
+        fclose(log_file);
+    }
+#endif
     // 新しいノードを作成してリストの先頭に追加
     Node* new_node = malloc(sizeof(Node));
     if (new_node == NULL) {
@@ -84,87 +88,104 @@ int exists_in_hashmap(HashMap* map, const unsigned char* hashkey, const unsigned
     if (map == NULL || map->table == NULL) {
         return 0; // ハッシュマップが初期化されていない
     }
-    FILE *log_file = fopen("/tmp/content_verification.log", "a");
-    fprintf(log_file, "Exists in HashMap\nhashkey: ");
-    for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
-        fprintf(log_file, "%02x", hashkey[i]);
-    }
-    fprintf(log_file, "\ndata: ");
-    fwrite(data, 1, data_len, log_file);
-    fprintf(log_file, "\ndata_len: %zu\n", data_len);
     size_t hash = hash_index(hashkey, map->size);
-    fprintf(log_file, "Hash Index: %zu\n", hash);
     Node* current = map->table[hash];
+#ifdef CONTENT_VERIFICATION_DEBUG
+    FILE *log_file = fopen("/tmp/content_verification.log", "a");
+    if (log_file != NULL) {
+        fprintf(log_file, "Exists in HashMap\nhashkey: ");
+        for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
+            fprintf(log_file, "%02x", hashkey[i]);
+        }
+        fprintf(log_file, "\ndata: ");
+        fwrite(data, 1, data_len, log_file);
+        fprintf(log_file, "\ndata_len: %zu\n", data_len);
+        fprintf(log_file, "Hash Index: %zu\n", hash);
+    }
+#endif
     while (current != NULL) {
-        fprintf(log_file, "Comparing with entry data: ");
-        fwrite(current->data, 1, current->data_len, log_file);
-        fprintf(log_file, "\n");
+#ifdef CONTENT_VERIFICATION_DEBUG
+        if (log_file != NULL) {
+            fprintf(log_file, "Comparing with entry data: ");
+            fwrite(current->data, 1, current->data_len, log_file);
+            fprintf(log_file, "\n");
+        }
+#endif
         if (memcmp(current->key, hashkey, SHA256_DIGEST_LENGTH) == 0 &&
             memcmp(current->data, data, data_len) == 0) {
-            // 見つかった場合、1を返す
-            fprintf(log_file, "Match found\n");
-            fclose(log_file);
+#ifdef CONTENT_VERIFICATION_DEBUG
+            if (log_file != NULL) {
+                fprintf(log_file, "Match found\n");
+                fclose(log_file);
+            }
+#endif
             return 1; // 存在する
         }
         current = current->next;
     }
-    fprintf(log_file, "No match found\n");
-    fclose(log_file);
+#ifdef CONTENT_VERIFICATION_DEBUG
+    if (log_file != NULL) {
+        fprintf(log_file, "No match found\n");
+        fclose(log_file);
+    }
+#endif
     return 0; // 存在しない
 }
 
 
 int verify_content(HashMap* map, const unsigned char* name, uint16_t name_len, const unsigned char* payload, uint16_t payload_len) {
-    FILE *log_file = fopen("/tmp/content_verification.log", "a");
-    if (log_file == NULL) {
-        perror("ログファイルを開けませんでした");
-        return -1;
-    }
-
     if (name_len == 0 || payload_len == 0) {
-        fprintf(log_file, "名前またはペイロードの長さが0です。検証をスキップします。\n");
-        fclose(log_file);
         // 名前またはペイロードの長さが0なら何もしない
         return -1;
     }
 
-    fprintf(log_file, "Verifying Content\n");
-    fprintf(log_file, "Name: ");
-    fwrite(name, 1, name_len, log_file);
-    fprintf(log_file, "\nName Length: %u\n", name_len);
-    fprintf(log_file, "Payload Length: %u\n", payload_len);
-    fprintf(log_file, "Payload: ");
-    fwrite(payload, 1, payload_len, log_file);
-    fprintf(log_file, "\n");
-
     // payloadのSHA256ハッシュを計算
     unsigned char hash[SHA256_DIGEST_LENGTH];
     if (compute_sha256(payload, payload_len, hash) != 0) {
-        fprintf(log_file, "SHA256の計算に失敗しました\n");
-        fclose(log_file);
         return -1;
     }
 
-    fprintf(log_file, "\n[SHA256 Hash]\n");
-    for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
-        fprintf(log_file, "%02x", hash[i]);
+#ifdef CONTENT_VERIFICATION_DEBUG
+    FILE *log_file = fopen("/tmp/content_verification.log", "a");
+    if (log_file != NULL) {
+        fprintf(log_file, "Verifying Content\n");
+        fprintf(log_file, "Name: ");
+        fwrite(name, 1, name_len, log_file);
+        fprintf(log_file, "\nName Length: %u\n", name_len);
+        fprintf(log_file, "Payload Length: %u\n", payload_len);
+        fprintf(log_file, "Payload: ");
+        fwrite(payload, 1, payload_len, log_file);
+        fprintf(log_file, "\n[SHA256 Hash]\n");
+        for (int i = 0; i < SHA256_DIGEST_LENGTH; i++) {
+            fprintf(log_file, "%02x", hash[i]);
+        }
+        fprintf(log_file, "\n[Verification Data]\n");
+        fwrite(name, 1, name_len, log_file);
+        fprintf(log_file, "\n");
     }
-    fprintf(log_file, "\n");
-
-    // コンテンツ検証（nameをそのまま使用）
-    fprintf(log_file, "[Verification Data]\n");
-    fwrite(name, 1, name_len, log_file);
-    fprintf(log_file, "\n");
+#endif
     
     int ret = 0;
     if (exists_in_hashmap(map, hash, name, name_len) == 1) {
-        fprintf(log_file, "コンテンツはデータベースに一致します。\n");
+#ifdef CONTENT_VERIFICATION_DEBUG
+        if (log_file != NULL) {
+            fprintf(log_file, "コンテンツはデータベースに一致します。\n");
+        }
+#endif
     } else {
-        fprintf(log_file, "コンテンツはデータベースに一致しません。\n");
+#ifdef CONTENT_VERIFICATION_DEBUG
+        if (log_file != NULL) {
+            fprintf(log_file, "コンテンツはデータベースに一致しません。\n");
+        }
+#endif
         ret = -1;
     }
-    fprintf(log_file, "----------\n");
-    fclose(log_file);
+#ifdef CONTENT_VERIFICATION_DEBUG
+    if (log_file != NULL) {
+        fprintf(log_file, "----------\n");
+        fclose(log_file);
+    }
+#endif
     
     return ret;
 }
