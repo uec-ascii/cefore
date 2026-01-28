@@ -6,7 +6,7 @@
 #include <cefore/content_verification_lib.h>
 
 /* デバッグログを有効にする場合は以下をコメント解除 */
-/* #define CONTENT_VERIFICATION_DEBUG */
+#define CONTENT_VERIFICATION_DEBUG
 
 int init_hashmap(HashMap* map, size_t size) {
     if (map == NULL || size == 0) {
