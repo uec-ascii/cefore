@@ -401,6 +401,7 @@ def watch_blocks(w3, contract):
             for value in values:
                 print(f"  既存データを登録: 0x{key} -> {value}")
                 add_verification_entry_to_fifo('0x' + key, value)
+                time.sleep(0.01)  # cefnetd側の読み取りを待つ（10ms）
         
     except Exception as e:
         print(f"警告: 初期データ取得失敗 - {str(e)}", file=sys.stderr)
@@ -448,8 +449,8 @@ def main():
                 write_log(f"エラー: {FIFO_PATH} が見つかりません", also_print=True)
                 sys.exit(1)
         
-        # FIFOを書き込みモード・非ブロッキングで開く（cefnetd側の読み取りを待たない）
-        fifo_fd = os.open(FIFO_PATH, os.O_WRONLY | os.O_NONBLOCK)
+        # FIFOを書き込みモード・ブロッキングで開く（書き込みが完了するまで待機）
+        fifo_fd = os.open(FIFO_PATH, os.O_WRONLY)
         verify_fifo = os.fdopen(fifo_fd, 'wb', buffering=0)  # バッファリングなし
         write_log(f"✓ 検証用FIFOを開きました: {FIFO_PATH}\n", also_print=True)
         
