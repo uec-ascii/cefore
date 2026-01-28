@@ -9339,47 +9339,56 @@ cefnetd_input_verify_update_process (
 	ssize_t len;
 	int processed = 0;
 	
-	// 利用可能な全データを読み切る（複数メッセージを処理）
-	while (1) {
-		// FIFOからデータを読み込む
-		len = read(hdl->verify_pipe_fd, buf, sizeof(buf));
-		
-		if (len <= 0) {
-			if (len == 0 || errno == EAGAIN || errno == EWOULDBLOCK) {
-				// データなし、または非ブロッキングで読み込めない場合は正常
-				return processed;
-			}
-			// エラー発生
-			cef_log_write (CefC_Log_Warn, "Failed to read from verify FIFO: %s\n", strerror(errno));
-			return -1;
+	// FIFOからデータを読み込む
+	len = read(hdl->verify_pipe_fd, buf, sizeof(buf));
+	
+	if (len <= 0) {
+		if (len == 0 || errno == EAGAIN || errno == EWOULDBLOCK) {
+			// データなし、または非ブロッキングで読み込めない場合は正常
+			return 0;
+		}
+		// エラー発生
+		cef_log_write (CefC_Log_Warn, "Failed to read from verify FIFO: %s\n", strerror(errno));
+		return -1;
+	}
+	
+	// 読み取ったバッファから複数メッセージを処理
+	size_t offset = 0;
+	while (offset < len) {
+		// 残りのバッファサイズをチェック
+		if (len - offset < 36) {
+			cef_log_write (CefC_Log_Warn, "Incomplete message in verify FIFO (remaining: %zd bytes)\n", len - offset);
+			break;
 		}
 		
 		// データフォーマット: [hashkey(32bytes)][data_len(4bytes)][data(variable)]
-		if (len < 36) {
-			cef_log_write (CefC_Log_Warn, "Invalid data length from verify FIFO: %zd\n", len);
-			continue;  // 次のメッセージを試す
-		}
-		
-		unsigned char* hashkey = buf;
+		unsigned char* hashkey = buf + offset;
 		uint32_t data_len;
-		memcpy(&data_len, buf + 32, sizeof(uint32_t));
-		unsigned char* data = buf + 36;
+		memcpy(&data_len, buf + offset + 32, sizeof(uint32_t));
 		
-		// データ長の妥当性チェック
-		if (36 + data_len != len) {
-			cef_log_write (CefC_Log_Warn, "Data length mismatch in verify FIFO: expected %u, got %zd\n", 
-						   36 + data_len, len);
-			continue;  // 次のメッセージを試す
+		// メッセージ全体のサイズをチェック
+		size_t msg_size = 36 + data_len;
+		if (offset + msg_size > len) {
+			cef_log_write (CefC_Log_Warn, "Incomplete message data in verify FIFO (expected %zu more bytes, got %zd)\n", 
+						   msg_size - (len - offset), len - offset);
+			break;
 		}
+		
+		unsigned char* data = buf + offset + 36;
 		
 		// HashMapに追加
 		if (insert_hashmap(&hdl->verify_map, hashkey, data, data_len) != 0) {
 			cef_log_write (CefC_Log_Error, "Failed to insert into verification HashMap\n");
-			continue;  // 次のメッセージを試す
+		} else {
+			processed++;
 		}
 		
-		processed++;
-		cef_log_write (CefC_Log_Info, "Added new content verification entry (data_len=%u)\n", data_len);
+		// 次のメッセージへ
+		offset += msg_size;
+	}
+	
+	if (processed > 0) {
+		cef_log_write (CefC_Log_Info, "Processed %d content verification entries from FIFO\n", processed);
 	}
 	
 	return processed;
